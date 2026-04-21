@@ -66,7 +66,7 @@
 ┌─────────────────┐     ┌─────────────────────┐     ┌──────────────────┐
 │      LOCAL      │     │       PREVIEW        │     │   PRODUCTION     │
 │                 │     │                      │     │                  │
-│  localhost:3000 │     │  [branch].vercel.app │     │   brikii.app     │
+│  localhost:3000 │     │  [branch].vercel.app │     │   brikii.fr     │
 │                 │     │                      │     │                  │
 │  Supabase DEV   │     │  Supabase STAGING    │     │  Supabase PROD   │
 │  (projet dev)   │     │  (projet stg)        │     │  (projet prod)   │
@@ -110,7 +110,7 @@ supabase CLI  # gestion migrations en local
 
 **Objectif :** l'application en production, stable et sécurisée
 
-- URL : `https://brikii.app`
+- URL : `https://brikii.fr`
 - Déclenchement : merge dans la branche `main` (manuel, après validation preview)
 - Base de données : Supabase projet PROD (région EU Frankfurt, plan Pro)
 - Variables : groupe "Production" dans Vercel Dashboard
@@ -370,7 +370,7 @@ Connexion
   → Middleware Next.js vérifie le JWT sur chaque route protégée
 
 Depuis pools.immo
-  → Clic sur un bien → redirect vers brikii.app/login?redirect=/biens/[id]
+  → Clic sur un bien → redirect vers brikii.fr/login?redirect=/biens/[id]
   → Après auth → redirect automatique vers la fiche du bien
 ```
 
@@ -508,8 +508,8 @@ chore: update dependencies
   "regions": ["cdg1"],
   "env": {
     "NEXT_PUBLIC_APP_URL": {
-      "production": "https://brikii.app",
-      "preview": "https://staging.brikii.app"
+      "production": "https://brikii.fr",
+      "preview": "https://staging.brikii.fr"
     }
   }
 }
@@ -522,13 +522,13 @@ chore: update dependencies
 | Événement | Environnement | URL |
 |-----------|---------------|-----|
 | Push sur `feature/*` | Preview | `brikii-[branch]-[hash].vercel.app` |
-| Push sur `main` | Production | `brikii.app` |
+| Push sur `main` | Production | `brikii.fr` |
 
 ### Domaines
 
 | Environnement | Domaine |
 |---------------|---------|
-| Production app | `brikii.app` |
+| Production app | `brikii.fr` |
 | Production vitrine | `pools.immo` |
 | Preview | Auto-généré par Vercel |
 
@@ -563,7 +563,7 @@ CLOUDFLARE_IMAGES_BASE_URL=https://images.brikii.fr
 
 # --- RESEND (emails) ---
 RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL=noreply@brikii.app
+RESEND_FROM_EMAIL=noreply@brikii.fr
 RESEND_FROM_NAME=Brikii
 
 # --- TWILIO (SMS) ---
@@ -661,7 +661,7 @@ const OTP_CONFIG = {
 ### Resend — Emails
 
 ```typescript
-// Tous les emails partent de noreply@brikii.app
+// Tous les emails partent de noreply@brikii.fr
 // Templates dans /emails/*.tsx (React Email)
 // Preview locale : npx react-email dev
 ```
@@ -897,7 +897,7 @@ Types              : PascalCase   → Bien.ts, PassAdresse.ts
 
 ```typescript
 // Variables : camelCase
-const userEmail = 'test@brikii.app'
+const userEmail = 'test@brikii.fr'
 const isLoading = false
 
 // Fonctions : camelCase, verbe d'action
@@ -967,7 +967,7 @@ Avant d'écrire la première ligne de code applicatif :
 
 ### Vercel
 - [ ] Créer le projet `brikii` connecté au repo GitHub
-- [ ] Configurer le domaine `brikii.app` (production)
+- [ ] Configurer le domaine `brikii.fr` (production)
 - [ ] Configurer le domaine `pools.immo` (production)
 - [ ] Ajouter les variables d'environnement Preview (→ Supabase STG)
 - [ ] Ajouter les variables d'environnement Production (→ Supabase PROD)
@@ -975,13 +975,13 @@ Avant d'écrire la première ligne de code applicatif :
 
 ### Comptes tiers à configurer
 - [ ] Cloudflare Images — créer le compte et le bucket `brikii`
-- [ ] Resend — créer le compte, vérifier le domaine `brikii.app`
+- [ ] Resend — créer le compte, vérifier le domaine `brikii.fr`
 - [ ] Twilio — créer le compte, acheter un numéro français
 - [ ] Stripe — configurer les produits et plans d'abonnement
 - [ ] Mapbox — créer le compte, noter le token public
 - [ ] Upstash — créer une base Redis
 - [ ] Sentry — créer le projet Next.js
-- [ ] UptimeRobot — créer les monitors pour brikii.app et pools.immo
+- [ ] UptimeRobot — créer les monitors pour brikii.fr et pools.immo
 
 ### Projet Next.js
 - [ ] `npx create-next-app@latest brikii --typescript --tailwind --app`

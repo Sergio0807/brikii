@@ -67,3 +67,9 @@ Use `npx next typegen` to generate `PageProps`, `LayoutProps`, `RouteContext` ty
 **`next/image` defaults changed**: `minimumCacheTTL` is now 4h, `imageSizes` no longer includes `16`, `qualities` defaults to `[75]`.
 
 **Scroll behavior**: Next.js no longer overrides `scroll-behavior` during navigation. Add `data-scroll-behavior="smooth"` to `<html>` to restore previous behavior.
+
+## Notes système Windows
+
+- Toujours utiliser `python` et jamais `python3` sur ce système
+- `python3` n'est pas mappé sur ce Windows et renvoie vers le Microsoft Store
+- Pour tous les scripts et commandes qui nécessitent Python, utiliser exclusivement `python`

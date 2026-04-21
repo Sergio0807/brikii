@@ -1,26 +1,84 @@
 @import "tailwindcss";
 
+/* ============================================================
+   BRIKII — Design Tokens
+   Source de vérité : PRD Annexe A
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Couleurs principales */
+  --brikii-yellow:        #F5C842;
+  --brikii-yellow-hover:  #e0b438;
+
+  /* Fond & texte */
+  --brikii-dark:          #1a1a1a;
+  --brikii-text:          #1a1a1a;
+  --brikii-text-muted:    #73726c;
+  --brikii-bg:            #ffffff;
+  --brikii-bg-subtle:     #f8f7f4;
+  --brikii-border:        rgba(0, 0, 0, 0.12);
+
+  /* Sémantique — succès */
+  --brikii-success:       #3B6D11;
+  --brikii-success-bg:    #EAF3DE;
+
+  /* Sémantique — danger */
+  --brikii-danger:        #A32D2D;
+  --brikii-danger-bg:     #FCEBEB;
+
+  /* Sémantique — info */
+  --brikii-info:          #185FA5;
+  --brikii-info-bg:       #E6F1FB;
+
+  /* Sémantique — warning */
+  --brikii-warning:       #92540a;
+  --brikii-warning-bg:    #FEF3C7;
+
+  /* Forme */
+  --brikii-radius-card:   12px;
+  --brikii-radius-btn:    8px;
+  --brikii-radius-input:  8px;
+  --brikii-border-width:  0.5px;
+
+  /* Sidebar */
+  --brikii-sidebar-w:     240px;
+  --brikii-header-h:      56px;
+
+  /* Ombres */
+  --brikii-shadow-card:   0 1px 4px rgba(0,0,0,0.06), 0 0 0 var(--brikii-border-width) var(--brikii-border);
+
+  /* Tokens Tailwind */
+  --background:           var(--brikii-bg);
+  --foreground:           var(--brikii-text);
+  --font-sans:            var(--font-geist-sans);
+  --font-mono:            var(--font-geist-mono);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background:     var(--background);
+  --color-foreground:     var(--foreground);
+  --font-sans:            var(--font-geist-sans);
+  --font-mono:            var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ============================================================
+   BASE
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:   var(--brikii-bg);
+  color:        var(--brikii-text);
+  font-family:  var(--font-sans, system-ui, -apple-system, sans-serif);
+  font-size:    14px;
+  line-height:  1.5;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Scrollbar discrète */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--brikii-border); border-radius: 3px; }

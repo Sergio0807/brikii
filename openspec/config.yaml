@@ -1,0 +1,116 @@
+context: |
+  ## Projet : Brikii
+
+  Plateforme modulaire d'outils métiers pour les professionnels de l'immobilier (agents, mandataires, négociateurs, responsables d'agence).
+  - App : brikii.app | Vitrine publique : pools.immo | Photos : images.brikii.fr (Cloudflare Images)
+  - Philosophie : modulaire, mobile-first, sécurisé, automatisé, évolutif
+
+  ## Stack technique
+
+  - Framework : Next.js 16 App Router + Turbopack, React 19, TypeScript strict
+  - UI : shadcn/ui + Tailwind CSS v4, path alias @/* → ./*
+  - Backend : Next.js API Routes
+  - BDD : PostgreSQL 15 via Supabase (RLS obligatoire, PostGIS, pgcrypto, 38 tables)
+  - Auth : Supabase Auth (JWT 24h, refresh token 30j)
+  - Stockage fichiers : Supabase Storage (URLs signées)
+  - Stockage photos : Cloudflare Images
+  - Emails : Resend + React Email (noreply@brikii.app)
+  - SMS/OTP : Twilio (6 chiffres, 10 min, bcrypt hash, 3 tentatives max)
+  - Paiements : Stripe (abonnements, webhooks)
+  - Cartes : Mapbox
+  - Rate limiting : Upstash Redis
+  - Scraping annonces : n8n (webhook existant, HMAC signé)
+  - Géocodage : API Adresse gouv.fr (gratuit)
+  - Génération PDF BIA : docxtemplater + LibreOffice headless
+  - Monitoring : Sentry + UptimeRobot
+  - Hébergement : Vercel (cdg1 — Paris)
+  - Validation : Zod sur toutes les API Routes
+
+  ## Modules
+
+  ### Pass'Adresses (MVP V1) — priorité maximale
+  Génération de BIA (Bon d'Indication d'Adresse) après qualification prospect.
+  Workflow : agent crée demande → magic link email → prospect remplit questionnaire (OTP SMS, CNI optionnelle, signature canvas) → scoring A/B/C/D → agent accepte/refuse → BIA PDF généré et envoyé.
+  Scoring /10 : OTP téléphone (2), email (1), adresse (1), CNI (2), signature (1), critères recherche (1), budget cohérent (1), délai <1h (0.5), secteur cohérent (0.5).
+  Relances auto : J+1 email, J+2 SMS, J+3 archivage.
+  Options : doc_identite_demande, doc_identite_obligatoire, signature_manuscrite, criteres_recherche, coordonnees_dans_bia, verification_sms.
+
+  ### Gestion des biens (MVP V1)
+  8 types : maison, appartement, terrain, immeuble, commerce, entrepôt, local pro, propriété.
+  Table centrale `biens` + tables détails par type (biens_maisons, etc.).
+  Création : URL (scraping n8n) ou manuel. Statuts : brouillon, sur le marché, sous offre, vendu, archivé.
+  Vues : tableau, cartes, carte Mapbox.
+
+  ### Mandats (MVP V1)
+  Types : exclusif, simple, semi-exclusif, recherche, gestion.
+  Alertes expiration J-30, J-15, J-7 (email + notif), J-0 (auto → expiré).
+
+  ### Carnet d'adresses (MVP V1)
+  CRM multi-rôles. Déduplication auto, tags, rappels, historique interactions.
+
+  ### Brikii Pool (V2)
+  Collaboration interprofessionnelle, partage mandats. Types : ouvert / fermé.
+  Rétrocession configurable par bien, écrasable par règle pool.
+  Niveaux d'accès : public, intercabinet, privé.
+
+  ### Immo Cloud (V2)
+  Gestion documentaire centralisée. Upload multiple, partage lien sécurisé, traçabilité accès.
+
+  ## Architecture environnements
+
+  - Local : localhost:3000 → Supabase brikii-dev (eu-west-1)
+  - Preview : feature/* push → Vercel preview → Supabase brikii-stg (eu-west-1)
+  - Production : main → brikii.app → Supabase brikii-prod (eu-west-1, Pro)
+
+  Branches : feature/[nom], fix/[nom], chore/[nom] → PR → main.
+
+  ## Conventions de nommage
+
+  - Composants React : PascalCase (BienCard.tsx)
+  - Pages/API Routes : lowercase (page.tsx, route.ts)
+  - Hooks : camelCase (useBiens.ts)
+  - Constantes : SCREAMING_SNAKE_CASE (MAX_BIA_PER_MONTH)
+  - Tables BDD : snake_case pluriel (pool_membres, pass_adresses)
+  - Colonnes BDD : snake_case (user_id, created_at)
+  - Index BDD : idx_[table]_[colonne]
+  - FK : [table_singulier]_id → user_id UUID REFERENCES users(id)
+  - Commits : feat/fix/chore/docs/refactor/style/test/db
+
+  ## Base de données — 38 tables
+
+  Toutes les tables ont : id UUID PK, created_at, updated_at, deleted_at (soft delete), metadata JSONB.
+  RLS activé sans exception. Extensions : postgis, uuid-ossp, pgcrypto.
+
+  UTILISATEURS (3) : users, agences, agence_membres
+  BIENS (9) : biens + biens_maisons/appartements/terrains/immeubles/commerces/entrepots/locaux_pro/proprietes
+  MANDATS (2) : mandats, mandat_proprietaires
+  CONTACTS (6) : contacts, contact_roles, contact_biens, contact_interactions, contact_rappels, contact_alertes_biens
+  PASS'ADRESSES (3) : pass_adresses, pass_templates, pass_relances
+  POOLS (5) : pools, pool_membres, pool_biens, pool_acces_prives, pool_invitations
+  DOCUMENTS (3) : documents, documents_requis, documents_acces
+  ABONNEMENTS (7) : abonnements, abonnements_quotas, abonnements_usage, factures, credits, credits_packs, parrainages
+  NOTIFICATIONS (2) : notifications, alertes_biens
+  STATISTIQUES (2) : stats_utilisateurs, stats_pools
+  SYSTÈME (4) : nouveautes, support_tickets, support_messages, page_statut
+
+  ## Sécurité
+
+  - RLS Supabase sur toutes les tables
+  - Validation Zod sur toutes les API Routes
+  - Magic links : UUID v4, SHA-256 hashé, usage unique, expiration 48h
+  - OTP SMS : bcrypt hashé, 3 tentatives max, 10 min
+  - Rate limiting Upstash Redis
+  - Headers sécurité dans next.config.ts (HSTS, CSP, X-Frame-Options)
+  - Audit logs sur toutes les actions sensibles
+  - Zéro secret dans le code (Vercel Env Vars uniquement)
+
+  ## Abonnements
+
+  Plans : Découverte (gratuit, 5 BIA/mois), Solo (29€, 30 BIA), Agence (79€, 100 BIA), Réseau (sur devis, illimité).
+  Crédits : 1 crédit = 1 BIA hors quota. Gains : parrainage (+10), invitation pool (+5).
+
+  ## Charte graphique
+
+  Couleur principale : #F5C842 (jaune Brikii), fond sombre : #1a1a1a, texte secondaire : #73726c.
+  Succès : #3B6D11/#EAF3DE, Danger : #A32D2D/#FCEBEB, Info : #185FA5/#E6F1FB.
+  Border radius card : 12px, border width : 0.5px.

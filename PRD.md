@@ -36,7 +36,7 @@
 
 **Brikii** est une plateforme modulaire d'outils métiers dédiée aux professionnels de l'immobilier. Elle repose sur une logique de **briques logicielles indépendantes mais interconnectées**, chacune répondant à un besoin précis du terrain.
 
-**URL de l'application :** `brikii.app`
+**URL de l'application :** `brikii.fr`
 **URL de la vitrine publique :** `pools.immo`
 **Hébergement photos :** `images.brikii.fr` (Cloudflare Images)
 
@@ -152,8 +152,8 @@ Les photos sont automatiquement téléchargées et re-hébergées sur Cloudflare
 | Environnement | Branche Git | URL | Supabase | Usage |
 |--------------|-------------|-----|----------|-------|
 | DEV | `develop` | localhost:3000 | Local | Développement |
-| STAGING | `staging` | staging.brikii.app | Projet staging | Tests |
-| PROD | `main` | brikii.app | Projet prod | Production |
+| STAGING | `staging` | staging.brikii.fr | Projet staging | Tests |
+| PROD | `main` | brikii.fr | Projet prod | Production |
 
 ### 3.2 Stratégie de branches Git
 
@@ -1509,7 +1509,7 @@ Tous les droits RGPD sont accessibles depuis "Mon compte" :
 -- On n'efface pas physiquement (obligations légales BIA)
 -- On anonymise toutes les données personnelles
 UPDATE users SET
-  email        = 'deleted_' || id || '@deleted.brikii.app',
+  email        = 'deleted_' || id || '@deleted.brikii.fr',
   prenom       = 'Utilisateur',
   nom          = 'Supprimé',
   telephone    = NULL,
@@ -1603,8 +1603,8 @@ Documents à finaliser avant le lancement :
 Brikii doit désigner un point de contact RGPD accessible depuis l'application et les emails :
 
 ```
-Email RGPD : privacy@brikii.app
-Formulaire : brikii.app/rgpd
+Email RGPD : privacy@brikii.fr
+Formulaire : brikii.fr/rgpd
 Délai de réponse garanti : 30 jours maximum (obligation légale)
 ```
 
