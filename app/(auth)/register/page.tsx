@@ -56,7 +56,7 @@ export default function RegisterPage() {
     })
 
     if (error) {
-      setError(error.message)
+      setError('Une erreur est survenue. Vérifiez vos informations et réessayez.')
       setLoading(false)
       return
     }
