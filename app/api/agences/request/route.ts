@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { Resend } from 'resend'
+import { getResend } from '@/lib/email/resend'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, getIp } from '@/lib/rate-limit'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 const BodySchema = z.object({
   siret:         z.string().regex(/^\d{14}$/),
@@ -64,7 +62,7 @@ export async function POST(request: NextRequest) {
 
   // Notification admin
   const adminEmail = process.env.RESEND_FROM_EMAIL ?? 'admin@brikii.fr'
-  await resend.emails.send({
+  await getResend().emails.send({
     from: `Brikii <${process.env.RESEND_FROM_EMAIL ?? 'noreply@brikii.fr'}>`,
     to:   adminEmail,
     subject: `[Brikii] Nouvelle demande d'agence : ${parsed.data.nom}`,
