@@ -61,31 +61,33 @@ export default async function BiensPage() {
           {biens.map(bien => {
             const statut = STATUT_LABELS[bien.statut] ?? { label: bien.statut, variant: 'neutral' as const }
             return (
-              <BrikiiCard key={bien.id} padding="sm">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-[var(--brikii-text)] truncate">
-                        {TYPE_LABELS[bien.type] ?? bien.type}
-                        {bien.ville ? ` · ${bien.ville}` : ''}
-                        {bien.code_postal ? ` (${bien.code_postal})` : ''}
-                      </span>
-                      {bien.a_verifier && (
-                        <BrikiiBadge variant="warning">A vérifier</BrikiiBadge>
+              <Link key={bien.id} href={`/biens/${bien.id}`} className="block hover:opacity-80 transition-opacity">
+                <BrikiiCard padding="sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-[var(--brikii-text)] truncate">
+                          {TYPE_LABELS[bien.type] ?? bien.type}
+                          {bien.ville ? ` · ${bien.ville}` : ''}
+                          {bien.code_postal ? ` (${bien.code_postal})` : ''}
+                        </span>
+                        {bien.a_verifier && (
+                          <BrikiiBadge variant="warning">A vérifier</BrikiiBadge>
+                        )}
+                      </div>
+                      {bien.reference && (
+                        <span className="text-xs text-[var(--brikii-text-muted)]">{bien.reference}</span>
                       )}
                     </div>
-                    {bien.reference && (
-                      <span className="text-xs text-[var(--brikii-text-muted)]">{bien.reference}</span>
-                    )}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-sm font-semibold text-[var(--brikii-text)]">
+                        {formatPrix(bien.prix)}
+                      </span>
+                      <BrikiiBadge variant={statut.variant}>{statut.label}</BrikiiBadge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm font-semibold text-[var(--brikii-text)]">
-                      {formatPrix(bien.prix)}
-                    </span>
-                    <BrikiiBadge variant={statut.variant}>{statut.label}</BrikiiBadge>
-                  </div>
-                </div>
-              </BrikiiCard>
+                </BrikiiCard>
+              </Link>
             )
           })}
         </div>

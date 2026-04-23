@@ -14,7 +14,7 @@ const bienSchema = z.object({
   prix: z.number().int().positive(),
   surface_hab: z.number().positive().optional(),
   descriptif: z.string().optional(),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
 })
 
 function generateReference(): string {

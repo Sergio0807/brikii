@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { BrikiiButton } from '@/components/shared/BrikiiButton'
 import { BrikiiInput } from '@/components/shared/BrikiiInput'
 import { BrikiiCard } from '@/components/shared/BrikiiCard'
+import { AdresseAutocomplete } from '@/components/shared/AdresseAutocomplete'
 import { ImportStatus } from './ImportStatus'
 
 type Tab = 'manuel' | 'import'
@@ -144,12 +145,16 @@ export function BienForm() {
             </select>
           </div>
 
-          <BrikiiInput
+          <AdresseAutocomplete
             label="Adresse"
             required
             value={adresse}
-            onChange={e => setAdresse(e.target.value)}
-            placeholder="12 rue des Lilas"
+            onChange={setAdresse}
+            onSelect={s => {
+              setAdresse(s.name)
+              setVille(s.city)
+              setCodePostal(s.postcode)
+            }}
           />
 
           <div className="grid grid-cols-2 gap-3">

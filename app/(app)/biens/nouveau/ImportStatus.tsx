@@ -84,7 +84,7 @@ export function ImportStatus({ importId, sourceUrl, createdAt, onRetry, onManual
   }, [poll, stopPolling])
 
   const isTerminal = status === 'completed' || status === 'error' || stuck
-  const showSpinner = !isTerminal && status !== 'error'
+  const showSpinner = !isTerminal
 
   if (stuck) {
     return (

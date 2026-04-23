@@ -49,12 +49,14 @@ export async function POST(req: NextRequest) {
     })
 
     if (!res.ok) throw new Error(`n8n responded ${res.status}`)
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[import] échec appel n8n:', n8nUrl, msg)
     await supabase.from('bien_imports').update({
       status: 'error',
       error_message: 'Impossible de contacter le service d\'import',
     }).eq('id', importRecord.id)
-    return NextResponse.json({ error: 'Impossible de contacter le service d\'import' }, { status: 502 })
+    return NextResponse.json({ error: 'Impossible de contacter le service d\'import', detail: msg }, { status: 502 })
   }
 
   await supabase.from('bien_imports').update({ status: 'scraping' }).eq('id', importRecord.id)
