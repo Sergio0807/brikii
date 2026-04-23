@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { BrikiiInput } from '@/components/shared/BrikiiInput'
 import { BrikiiButton } from '@/components/shared/BrikiiButton'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') ?? '/dashboard'
@@ -36,9 +36,39 @@ export default function LoginPage() {
   }
 
   return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <BrikiiInput
+        label="Email"
+        type="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="vous@exemple.fr"
+        required
+        autoComplete="email"
+      />
+      <BrikiiInput
+        label="Mot de passe"
+        type="password"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+        placeholder="••••••••"
+        required
+        autoComplete="current-password"
+      />
+
+      {error && <p className="text-xs text-[var(--brikii-danger)]">{error}</p>}
+
+      <BrikiiButton type="submit" loading={loading} className="w-full mt-1">
+        Se connecter
+      </BrikiiButton>
+    </form>
+  )
+}
+
+export default function LoginPage() {
+  return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--brikii-bg-subtle)] px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="flex items-center gap-2 justify-center mb-8">
           <span
             className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--brikii-dark)] font-bold"
@@ -55,32 +85,9 @@ export default function LoginPage() {
         >
           <h1 className="text-base font-semibold text-[var(--brikii-text)] mb-6">Connexion</h1>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <BrikiiInput
-              label="Email"
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="vous@exemple.fr"
-              required
-              autoComplete="email"
-            />
-            <BrikiiInput
-              label="Mot de passe"
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              autoComplete="current-password"
-            />
-
-            {error && <p className="text-xs text-[var(--brikii-danger)]">{error}</p>}
-
-            <BrikiiButton type="submit" loading={loading} className="w-full mt-1">
-              Se connecter
-            </BrikiiButton>
-          </form>
+          <Suspense>
+            <LoginForm />
+          </Suspense>
 
           <div className="mt-4 flex flex-col gap-2 text-center text-xs text-[var(--brikii-text-muted)]">
             <Link href="/reset-password" className="hover:text-[var(--brikii-text)] transition-colors">
