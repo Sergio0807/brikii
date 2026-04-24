@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { BrikiiButton } from '@/components/shared/BrikiiButton'
 import { BrikiiInput } from '@/components/shared/BrikiiInput'
@@ -10,23 +10,27 @@ import { ImportMandatStatus } from './ImportMandatStatus'
 type Tab = 'manuel' | 'import'
 
 const MANDAT_TYPES = [
-  { value: 'exclusif',     label: 'Exclusif' },
-  { value: 'simple',       label: 'Simple' },
+  { value: 'exclusif',      label: 'Exclusif' },
+  { value: 'simple',        label: 'Simple' },
   { value: 'semi_exclusif', label: 'Semi-exclusif' },
-  { value: 'recherche',    label: 'Recherche' },
-  { value: 'gestion',      label: 'Gestion' },
+  { value: 'recherche',     label: 'Recherche' },
+  { value: 'gestion',       label: 'Gestion' },
 ]
 
 const HONO_CHARGES = [
-  { value: '',         label: '— Non renseigné —' },
-  { value: 'vendeur',  label: 'Vendeur' },
+  { value: '',          label: '— Non renseigné —' },
+  { value: 'vendeur',   label: 'Vendeur' },
   { value: 'acquereur', label: 'Acquéreur' },
-  { value: 'partage',  label: 'Partagé' },
+  { value: 'partage',   label: 'Partagé' },
 ]
+
+const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif']
+const ACCEPTED_EXT   = '.pdf,.jpg,.jpeg,.png,.heic,.heif'
+const MAX_SIZE_MB    = 20
 
 interface ImportState {
   importId:  string
-  sourceUrl: string
+  fileName:  string
   createdAt: number
 }
 
@@ -40,23 +44,67 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
   const [tab, setTab] = useState<Tab>('manuel')
 
   // ── Champs saisie manuelle ────────────────────────────────────────────────
-  const [type, setType]                       = useState('exclusif')
-  const [dateSignature, setDateSignature]     = useState('')
-  const [dateDebut, setDateDebut]             = useState('')
-  const [dureeMois, setDureeMois]             = useState('')
-  const [reconductible, setReconductible]     = useState(true)
-  const [prixVente, setPrixVente]             = useState('')
-  const [honorairesPct, setHonorairesPct]     = useState('')
+  const [type, setType]                         = useState('exclusif')
+  const [dateSignature, setDateSignature]       = useState('')
+  const [dateDebut, setDateDebut]               = useState('')
+  const [dureeMois, setDureeMois]               = useState('')
+  const [reconductible, setReconductible]       = useState(true)
+  const [prixVente, setPrixVente]               = useState('')
+  const [honorairesPct, setHonorairesPct]       = useState('')
   const [honorairesCharge, setHonorairesCharge] = useState('')
-  const [manualLoading, setManualLoading]     = useState(false)
-  const [manualError, setManualError]         = useState<string | null>(null)
+  const [manualLoading, setManualLoading]       = useState(false)
+  const [manualError, setManualError]           = useState<string | null>(null)
 
-  // ── Import PDF ────────────────────────────────────────────────────────────
-  const [importUrl, setImportUrl]             = useState('')
-  const [importLoading, setImportLoading]     = useState(false)
-  const [importError, setImportError]         = useState<string | null>(null)
+  // ── Import fichier ────────────────────────────────────────────────────────
+  const fileInputRef                            = useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile]         = useState<File | null>(null)
+  const [fileError, setFileError]               = useState<string | null>(null)
+  const [dragging, setDragging]                 = useState(false)
+  const [importLoading, setImportLoading]       = useState(false)
+  const [importError, setImportError]           = useState<string | null>(null)
   const [importUnavailable, setImportUnavailable] = useState(false)
-  const [importState, setImportState]         = useState<ImportState | null>(null)
+  const [importState, setImportState]           = useState<ImportState | null>(null)
+
+  // ── File helpers ──────────────────────────────────────────────────────────
+
+  const validateAndSetFile = useCallback((f: File) => {
+    const isHeic = /\.heic?$/i.test(f.name) || /\.heif$/i.test(f.name)
+    if (!ACCEPTED_TYPES.includes(f.type) && !isHeic) {
+      setFileError('Format non supporté. Utilisez PDF, JPG, PNG ou HEIC.')
+      return
+    }
+    if (f.size > MAX_SIZE_MB * 1024 * 1024) {
+      setFileError(`Fichier trop volumineux (max ${MAX_SIZE_MB} Mo).`)
+      return
+    }
+    setSelectedFile(f)
+    setFileError(null)
+    setImportError(null)
+    setImportUnavailable(false)
+  }, [])
+
+  function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (f) validateAndSetFile(f)
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragging(false)
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
+    const f = e.dataTransfer.files?.[0]
+    if (f) validateAndSetFile(f)
+  }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -100,21 +148,24 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
     }
   }
 
-  async function handleImport(url: string) {
+  async function handleImportFile(file: File) {
     setImportError(null)
     setImportUnavailable(false)
     setImportLoading(true)
     setImportState(null)
+
+    const formData = new FormData()
+    formData.append('file', file)
+
     try {
       const res = await fetch('/api/mandats/import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source_url: url }),
+        body: formData,
       })
+
       if (!res.ok) {
         const data = await res.json() as { error?: unknown }
-        const msg = typeof data.error === 'string' ? data.error : ''
-        // n8n non configuré → message dédié
+        const msg  = typeof data.error === 'string' ? data.error : ''
         if (res.status === 502 && (msg.includes('non configuré') || msg.includes('n8n'))) {
           setImportUnavailable(true)
           return
@@ -122,8 +173,9 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
         setImportError(msg || "Impossible de lancer l'import.")
         return
       }
+
       const result = await res.json() as { import_id: string }
-      setImportState({ importId: result.import_id, sourceUrl: url, createdAt: Date.now() })
+      setImportState({ importId: result.import_id, fileName: file.name, createdAt: Date.now() })
     } catch {
       setImportError('Erreur réseau. Veuillez réessayer.')
     } finally {
@@ -161,7 +213,10 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
             {bienId ? (
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-[var(--brikii-text)]">Bien associé</span>
-                <span className="text-sm text-[var(--brikii-text)] bg-[var(--brikii-bg-subtle)] px-3 py-2 rounded-md">
+                <span
+                  className="text-sm text-[var(--brikii-text)] px-3 py-2"
+                  style={{ background: 'var(--brikii-bg-subtle)', borderRadius: 'var(--brikii-radius-input)' }}
+                >
                   {bienLabel ?? bienId}
                 </span>
               </div>
@@ -207,7 +262,7 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
               />
             </div>
 
-            {/* Durée */}
+            {/* Durée + Reconductible */}
             <div className="grid grid-cols-2 gap-4">
               <BrikiiInput
                 label="Durée (mois)"
@@ -290,16 +345,20 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
       {tab === 'import' && (
         <BrikiiCard className="flex flex-col gap-5">
           <div>
-            <p className="text-sm text-[var(--brikii-text)]">
-              Collez l&apos;URL du document PDF ou de l&apos;annonce à importer.
+            <p className="text-sm font-medium text-[var(--brikii-text)]">
+              Déposez votre mandat au format PDF ou image
             </p>
             <p className="text-xs text-[var(--brikii-text-muted)] mt-1">
-              Le workflow d&apos;extraction créera automatiquement le mandat avec les informations détectées.
+              Le document sera analysé automatiquement pour préremplir la fiche mandat.
+              Formats acceptés : PDF, JPG, PNG, HEIC — max {MAX_SIZE_MB} Mo.
             </p>
           </div>
 
           {importUnavailable ? (
-            <div className="flex flex-col gap-3 px-4 py-3 bg-[var(--brikii-warning-bg)] rounded-lg">
+            <div
+              className="flex flex-col gap-3 px-4 py-3"
+              style={{ background: 'var(--brikii-warning-bg)', borderRadius: 'var(--brikii-radius-input)' }}
+            >
               <p className="text-sm text-[var(--brikii-warning)]">
                 L&apos;import intelligent de documents n&apos;est pas encore disponible.
               </p>
@@ -311,39 +370,94 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
                 Saisir manuellement
               </BrikiiButton>
             </div>
-          ) : !importState ? (
+          ) : importState ? (
+            <ImportMandatStatus
+              importId={importState.importId}
+              fileName={importState.fileName}
+              createdAt={importState.createdAt}
+              onRetry={() => selectedFile && handleImportFile(selectedFile)}
+              onManual={() => setTab('manuel')}
+            />
+          ) : (
             <>
-              <BrikiiInput
-                label="URL du document"
-                type="url"
-                value={importUrl}
-                onChange={e => setImportUrl(e.target.value)}
-                placeholder="https://…"
+              {/* Zone de dépôt */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_EXT}
+                onChange={handleFileInput}
+                className="sr-only"
+                aria-label="Choisir un fichier"
               />
+
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={e => e.key === 'Enter' && fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={[
+                  'flex flex-col items-center justify-center gap-3 px-6 py-10 border-2 border-dashed cursor-pointer transition-colors select-none',
+                  dragging
+                    ? 'border-[var(--brikii-dark)] bg-[var(--brikii-bg-subtle)]'
+                    : selectedFile
+                      ? 'border-[var(--brikii-dark)] bg-[var(--brikii-bg-subtle)]'
+                      : 'border-[var(--brikii-border)] hover:border-[var(--brikii-dark)] hover:bg-[var(--brikii-bg-subtle)]',
+                ].join(' ')}
+                style={{ borderRadius: 'var(--brikii-radius-card)' }}
+              >
+                {selectedFile ? (
+                  <>
+                    <span className="text-2xl">📄</span>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-[var(--brikii-text)] break-all">
+                        {selectedFile.name}
+                      </p>
+                      <p className="text-xs text-[var(--brikii-text-muted)] mt-0.5">
+                        {(selectedFile.size / 1024 / 1024).toFixed(1)} Mo · Cliquez pour changer
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-2xl opacity-40">📂</span>
+                    <div className="text-center">
+                      <p className="text-sm text-[var(--brikii-text-muted)]">
+                        Déposez votre fichier ici ou{' '}
+                        <span className="text-[var(--brikii-dark)] underline underline-offset-2">
+                          cliquez pour parcourir
+                        </span>
+                      </p>
+                      <p className="text-xs text-[var(--brikii-text-muted)] mt-0.5">
+                        PDF, JPG, PNG, HEIC — max {MAX_SIZE_MB} Mo
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {fileError && (
+                <p className="text-xs text-[var(--brikii-danger)]">{fileError}</p>
+              )}
               {importError && (
                 <p className="text-xs text-[var(--brikii-danger)]">{importError}</p>
               )}
+
               <div className="flex justify-end gap-2">
                 <BrikiiButton variant="ghost" type="button" onClick={() => setTab('manuel')}>
                   Saisir manuellement
                 </BrikiiButton>
                 <BrikiiButton
                   loading={importLoading}
-                  disabled={!importUrl.trim()}
-                  onClick={() => handleImport(importUrl.trim())}
+                  disabled={!selectedFile || !!fileError}
+                  onClick={() => selectedFile && handleImportFile(selectedFile)}
                 >
-                  Lancer l&apos;import
+                  Importer le document
                 </BrikiiButton>
               </div>
             </>
-          ) : (
-            <ImportMandatStatus
-              importId={importState.importId}
-              sourceUrl={importState.sourceUrl}
-              createdAt={importState.createdAt}
-              onRetry={url => handleImport(url)}
-              onManual={() => setTab('manuel')}
-            />
           )}
         </BrikiiCard>
       )}

@@ -9,9 +9,9 @@ type ImportStatusValue = 'pending' | 'processing' | 'completed' | 'error'
 
 interface ImportMandatStatusProps {
   importId:  string
-  sourceUrl: string
+  fileName:  string
   createdAt: number
-  onRetry:   (url: string) => void
+  onRetry:   () => void
   onManual:  () => void
 }
 
@@ -24,7 +24,7 @@ const STATUS_MESSAGES: Record<ImportStatusValue, string> = {
 
 const STUCK_THRESHOLD_MS = 15 * 60 * 1000
 
-export function ImportMandatStatus({ importId, sourceUrl, createdAt, onRetry, onManual }: ImportMandatStatusProps) {
+export function ImportMandatStatus({ importId, fileName, createdAt, onRetry, onManual }: ImportMandatStatusProps) {
   const router = useRouter()
   const [status, setStatus] = useState<ImportStatusValue>('pending')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -80,8 +80,11 @@ export function ImportMandatStatus({ importId, sourceUrl, createdAt, onRetry, on
         <p className="text-sm text-[var(--brikii-warning)]">
           L&apos;import prend plus de temps que prévu ou a rencontré un problème.
         </p>
+        {fileName && (
+          <p className="text-xs text-[var(--brikii-text-muted)]">Fichier : {fileName}</p>
+        )}
         <div className="flex gap-2">
-          <BrikiiButton variant="secondary" size="sm" onClick={() => onRetry(sourceUrl)}>
+          <BrikiiButton variant="secondary" size="sm" onClick={onRetry}>
             Relancer l&apos;import
           </BrikiiButton>
           <BrikiiButton variant="ghost" size="sm" onClick={onManual}>
@@ -97,7 +100,7 @@ export function ImportMandatStatus({ importId, sourceUrl, createdAt, onRetry, on
       <div className="flex flex-col gap-3">
         <p className="text-sm text-[var(--brikii-danger)]">{errorMessage}</p>
         <div className="flex gap-2">
-          <BrikiiButton variant="secondary" size="sm" onClick={() => onRetry(sourceUrl)}>
+          <BrikiiButton variant="secondary" size="sm" onClick={onRetry}>
             Relancer l&apos;import
           </BrikiiButton>
           <BrikiiButton variant="ghost" size="sm" onClick={onManual}>
