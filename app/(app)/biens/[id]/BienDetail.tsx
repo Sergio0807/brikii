@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { BrikiiButton } from '@/components/shared/BrikiiButton'
 import { BrikiiInput } from '@/components/shared/BrikiiInput'
@@ -173,6 +173,21 @@ export function BienDetail({ bien: initial }: { bien: Bien }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('apercu')
+  const [selectedPhotoIdx, setSelectedPhotoIdx] = useState(0)
+
+  const photos = initial.photos ?? []
+  const prevPhoto = useCallback(() => setSelectedPhotoIdx(i => (i - 1 + photos.length) % photos.length), [photos.length])
+  const nextPhoto = useCallback(() => setSelectedPhotoIdx(i => (i + 1) % photos.length), [photos.length])
+
+  useEffect(() => {
+    if (photos.length < 2) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'ArrowLeft') prevPhoto()
+      if (e.key === 'ArrowRight') nextPhoto()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [photos.length, prevPhoto, nextPhoto])
 
   // Bien fields
   const [type, setType] = useState(initial.type)
@@ -291,7 +306,7 @@ export function BienDetail({ bien: initial }: { bien: Bien }) {
   // ─── View mode ───────────────────────────────────────────────────────────────
   if (!editing) {
     const m2 = prixM2(initial.prix, initial.surface_hab)
-    const hasPhotos = initial.photos && initial.photos.length > 0
+    const hasPhotos = photos.length > 0
     const hasInitialDetails = initial.type === 'maison' || initial.type === 'appartement'
 
     return (
@@ -304,8 +319,33 @@ export function BienDetail({ bien: initial }: { bien: Bien }) {
         >
           {/* Photo area */}
           {hasPhotos ? (
-            <div className="aspect-video overflow-hidden">
-              <img src={initial.photos![0].url} alt="" className="w-full h-full object-cover" />
+            <div className="relative aspect-video overflow-hidden group">
+              <img
+                src={photos[selectedPhotoIdx].url}
+                alt=""
+                className="w-full h-full object-cover transition-opacity duration-200"
+              />
+              {photos.length > 1 && (
+                <>
+                  <button
+                    onClick={prevPhoto}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60"
+                    aria-label="Photo précédente"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={nextPhoto}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60"
+                    aria-label="Photo suivante"
+                  >
+                    ›
+                  </button>
+                  <span className="absolute bottom-2 right-2 px-2 py-0.5 text-xs bg-black/50 text-white rounded-full">
+                    {selectedPhotoIdx + 1} / {photos.length}
+                  </span>
+                </>
+              )}
             </div>
           ) : (
             <div
@@ -317,17 +357,28 @@ export function BienDetail({ bien: initial }: { bien: Bien }) {
             />
           )}
 
-          {/* Thumbnail strip for multiple photos */}
-          {hasPhotos && initial.photos!.length > 1 && (
+          {/* Thumbnail strip */}
+          {hasPhotos && photos.length > 1 && (
             <div className="flex gap-1 p-2 bg-[var(--brikii-bg-subtle)] overflow-x-auto">
-              {initial.photos!.map(p => (
-                <img
+              {photos.map((p, i) => (
+                <button
                   key={p.id}
-                  src={p.url}
-                  alt=""
-                  className="w-16 h-12 object-cover shrink-0 opacity-70 hover:opacity-100 transition-colors"
+                  onClick={() => setSelectedPhotoIdx(i)}
+                  className="shrink-0 focus:outline-none"
                   style={{ borderRadius: 'var(--brikii-radius-input)' }}
-                />
+                >
+                  <img
+                    src={p.url}
+                    alt=""
+                    className="w-16 h-12 object-cover transition-opacity"
+                    style={{
+                      borderRadius: 'var(--brikii-radius-input)',
+                      opacity: i === selectedPhotoIdx ? 1 : 0.55,
+                      outline: i === selectedPhotoIdx ? '2px solid var(--brikii-dark)' : 'none',
+                      outlineOffset: '1px',
+                    }}
+                  />
+                </button>
               ))}
             </div>
           )}
