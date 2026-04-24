@@ -56,6 +56,8 @@ function fileNameFromPath(sourcePath: string | null): string {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+type BienShape = { ville: string | null; code_postal: string | null }
+
 type MandatRow = {
   id: string
   numero: string
@@ -67,7 +69,8 @@ type MandatRow = {
   prix_vente: number | null
   honoraires_pct: number | null
   created_at: string
-  bien: { ville: string | null; code_postal: string | null } | null
+  // Supabase retourne la relation comme tableau ou objet selon le client — on accepte les deux
+  bien: BienShape[] | BienShape | null
 }
 
 type ImportRow = {
@@ -147,7 +150,7 @@ export default async function MandatsPage() {
 function MandatCard({ mandat: m }: { mandat: MandatRow }) {
   const statutCfg = STATUT_CONFIG[m.statut] ?? { label: m.statut, variant: 'neutral' as const }
   const metierCfg = m.statut_metier ? STATUT_METIER_CONFIG[m.statut_metier] : null
-  const bien = m.bien as { ville?: string | null; code_postal?: string | null } | null
+  const bien: BienShape | null = Array.isArray(m.bien) ? (m.bien[0] ?? null) : m.bien
   const bienLabel = bien?.ville
     ? `${bien.ville}${bien.code_postal ? ` (${bien.code_postal})` : ''}`
     : null
