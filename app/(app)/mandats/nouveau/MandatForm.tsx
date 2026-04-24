@@ -29,9 +29,10 @@ const ACCEPTED_EXT   = '.pdf,.jpg,.jpeg,.png,.heic,.heif'
 const MAX_SIZE_MB    = 20
 
 interface ImportState {
-  importId:  string
-  fileName:  string
-  createdAt: number
+  importId:     string
+  fileName:     string
+  createdAt:    number
+  n8nAvailable: boolean
 }
 
 interface MandatFormProps {
@@ -56,14 +57,13 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
   const [manualError, setManualError]           = useState<string | null>(null)
 
   // ── Import fichier ────────────────────────────────────────────────────────
-  const fileInputRef                            = useRef<HTMLInputElement>(null)
-  const [selectedFile, setSelectedFile]         = useState<File | null>(null)
-  const [fileError, setFileError]               = useState<string | null>(null)
-  const [dragging, setDragging]                 = useState(false)
-  const [importLoading, setImportLoading]       = useState(false)
-  const [importError, setImportError]           = useState<string | null>(null)
-  const [importUnavailable, setImportUnavailable] = useState(false)
-  const [importState, setImportState]           = useState<ImportState | null>(null)
+  const fileInputRef                      = useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile]   = useState<File | null>(null)
+  const [fileError, setFileError]         = useState<string | null>(null)
+  const [dragging, setDragging]           = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importError, setImportError]     = useState<string | null>(null)
+  const [importState, setImportState]     = useState<ImportState | null>(null)
 
   // ── File helpers ──────────────────────────────────────────────────────────
 
@@ -80,7 +80,7 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
     setSelectedFile(f)
     setFileError(null)
     setImportError(null)
-    setImportUnavailable(false)
+    setImportState(null)
   }, [])
 
   function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
@@ -150,7 +150,6 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
 
   async function handleImportFile(file: File) {
     setImportError(null)
-    setImportUnavailable(false)
     setImportLoading(true)
     setImportState(null)
 
@@ -165,17 +164,17 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
 
       if (!res.ok) {
         const data = await res.json() as { error?: unknown }
-        const msg  = typeof data.error === 'string' ? data.error : ''
-        if (res.status === 502 && (msg.includes('non configuré') || msg.includes('n8n'))) {
-          setImportUnavailable(true)
-          return
-        }
-        setImportError(msg || "Impossible de lancer l'import.")
+        setImportError(typeof data.error === 'string' ? data.error : "Impossible d'uploader le fichier.")
         return
       }
 
-      const result = await res.json() as { import_id: string }
-      setImportState({ importId: result.import_id, fileName: file.name, createdAt: Date.now() })
+      const result = await res.json() as { import_id: string; n8n_available: boolean }
+      setImportState({
+        importId:     result.import_id,
+        fileName:     file.name,
+        createdAt:    Date.now(),
+        n8nAvailable: result.n8n_available,
+      })
     } catch {
       setImportError('Erreur réseau. Veuillez réessayer.')
     } finally {
@@ -354,23 +353,34 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
             </p>
           </div>
 
-          {importUnavailable ? (
+          {importState && !importState.n8nAvailable ? (
+            /* Fichier uploadé mais analyse non disponible */
             <div
               className="flex flex-col gap-3 px-4 py-3"
-              style={{ background: 'var(--brikii-warning-bg)', borderRadius: 'var(--brikii-radius-input)' }}
+              style={{ background: 'var(--brikii-bg-subtle)', border: '1px solid var(--brikii-border)', borderRadius: 'var(--brikii-radius-card)' }}
             >
-              <p className="text-sm text-[var(--brikii-warning)]">
-                L&apos;import intelligent de documents n&apos;est pas encore disponible.
-              </p>
-              <p className="text-xs text-[var(--brikii-text-muted)]">
-                Le workflow d&apos;extraction automatique n&apos;est pas encore configuré.
-                Vous pouvez saisir les informations manuellement.
-              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-base">✅</span>
+                <p className="text-sm font-medium text-[var(--brikii-text)]">
+                  Fichier déposé avec succès
+                </p>
+              </div>
+              <p className="text-xs text-[var(--brikii-text-muted)]">{importState.fileName}</p>
+              <div
+                className="px-3 py-2"
+                style={{ background: 'var(--brikii-warning-bg)', borderRadius: 'var(--brikii-radius-input)' }}
+              >
+                <p className="text-xs text-[var(--brikii-warning)]">
+                  L&apos;analyse automatique n&apos;est pas encore disponible.
+                  Votre fichier est conservé et pourra être traité ultérieurement.
+                </p>
+              </div>
               <BrikiiButton variant="ghost" size="sm" onClick={() => setTab('manuel')}>
-                Saisir manuellement
+                Continuer en saisie manuelle
               </BrikiiButton>
             </div>
           ) : importState ? (
+            /* Fichier uploadé + n8n déclenché → polling */
             <ImportMandatStatus
               importId={importState.importId}
               fileName={importState.fileName}

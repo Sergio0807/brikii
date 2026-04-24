@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Validation type
-  const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')
+  const isHeic = /\.heic?$|\.heif$/i.test(file.name)
   if (!ALLOWED_TYPES.has(file.type) && !isHeic) {
     return NextResponse.json(
       { error: 'Format non supporté. Utilisez PDF, JPG, PNG ou HEIC.' },
@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Fichier trop volumineux (max 20 Mo).' }, { status: 400 })
   }
 
-  // Créer l'import en base (status pending)
+  // ── Étape 1 : créer l'import en base ─────────────────────────────────────
+
   const { data: importRow, error: insertErr } = await supabase
     .from('mandat_imports')
     .insert({ user_id: user.id, source_url: file.name, status: 'pending' })
@@ -54,9 +55,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Erreur création import' }, { status: 500 })
   }
 
-  // Upload dans Supabase Storage via admin client (bypass RLS bucket)
+  // ── Étape 2 : upload dans Supabase Storage ────────────────────────────────
+
   const adminClient = createAdminClient()
-  const ext = file.name.split('.').pop() ?? 'bin'
+  const ext         = file.name.split('.').pop() ?? 'bin'
   const storagePath = `${user.id}/${importRow.id}.${ext}`
 
   const bytes  = await file.arrayBuffer()
@@ -78,36 +80,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Erreur upload fichier : ${uploadErr.message}` }, { status: 500 })
   }
 
-  // Mettre à jour source_url avec le chemin réel
+  // Mettre à jour le chemin réel
   await supabase
     .from('mandat_imports')
     .update({ source_url: storagePath })
     .eq('id', importRow.id)
 
-  // Vérifier si n8n est configuré
+  // ── Étape 3 : appel n8n si configuré (optionnel) ──────────────────────────
+
   const webhookUrl = process.env.N8N_MANDAT_WEBHOOK_URL
   if (!webhookUrl) {
-    await supabase
-      .from('mandat_imports')
-      .update({ status: 'error', error_message: 'N8N_MANDAT_WEBHOOK_URL non configuré' })
-      .eq('id', importRow.id)
-    return NextResponse.json({ error: 'Import n8n non configuré' }, { status: 502 })
+    // Upload réussi mais analyse automatique non disponible — pas une erreur
+    return NextResponse.json(
+      { import_id: importRow.id, n8n_available: false },
+      { status: 202 }
+    )
   }
 
-  // Générer une URL signée (1h) pour que n8n puisse récupérer le fichier
+  // Générer une URL signée (1h) pour que n8n récupère le fichier
   const { data: signed, error: signErr } = await adminClient.storage
     .from('mandat-documents')
     .createSignedUrl(storagePath, 3600)
 
   if (signErr || !signed?.signedUrl) {
+    // Signed URL échouée → on signale mais le fichier est bien uploadé
     await supabase
       .from('mandat_imports')
-      .update({ status: 'error', error_message: 'Impossible de générer l\'URL signée' })
+      .update({ status: 'error', error_message: 'Impossible de générer l\'URL signée pour n8n' })
       .eq('id', importRow.id)
     return NextResponse.json({ error: 'Erreur génération URL signée' }, { status: 500 })
   }
 
-  // Appel n8n — fire and no-wait
   try {
     const n8nRes = await fetch(webhookUrl, {
       method: 'POST',
@@ -120,16 +123,14 @@ export async function POST(req: NextRequest) {
       }),
     })
 
-    if (!n8nRes.ok) {
-      throw new Error(`n8n HTTP ${n8nRes.status}`)
-    }
+    if (!n8nRes.ok) throw new Error(`n8n HTTP ${n8nRes.status}`)
 
     await supabase
       .from('mandat_imports')
       .update({ status: 'processing' })
       .eq('id', importRow.id)
 
-    return NextResponse.json({ import_id: importRow.id }, { status: 202 })
+    return NextResponse.json({ import_id: importRow.id, n8n_available: true }, { status: 202 })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur n8n inconnue'
     await supabase
