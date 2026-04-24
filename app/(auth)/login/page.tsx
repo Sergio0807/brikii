@@ -7,10 +7,25 @@ import { createClient } from '@/lib/supabase/client'
 import { BrikiiInput } from '@/components/shared/BrikiiInput'
 import { BrikiiButton } from '@/components/shared/BrikiiButton'
 
+const ERROR_MESSAGES: Record<string, string> = {
+  auth_callback_failed: 'Le lien de confirmation est invalide ou a expiré. Veuillez vous réinscrire.',
+  otp_expired:          'Le lien de confirmation a expiré. Veuillez vous réinscrire.',
+  access_denied:        'Accès refusé. Veuillez vous réinscrire.',
+}
+
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect') ?? '/dashboard'
+  const redirect    = searchParams.get('redirect') ?? '/dashboard'
+  const confirmed   = searchParams.get('confirmed') === 'true'
+  const errorParam  = searchParams.get('error')
+  const errorCode   = searchParams.get('error_code')
+
+  const urlError = errorCode
+    ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES[errorParam ?? ''] ?? 'Une erreur est survenue.')
+    : errorParam
+      ? (ERROR_MESSAGES[errorParam] ?? 'Une erreur est survenue.')
+      : null
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -37,6 +52,16 @@ function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {confirmed && (
+        <p className="text-xs text-[var(--brikii-success)] bg-[var(--brikii-success-bg)] px-3 py-2 rounded">
+          Votre email est confirmé. Vous pouvez vous connecter.
+        </p>
+      )}
+      {urlError && (
+        <p className="text-xs text-[var(--brikii-danger)] bg-[var(--brikii-danger-bg,#fff0f0)] px-3 py-2 rounded">
+          {urlError}
+        </p>
+      )}
       <BrikiiInput
         label="Email"
         type="email"
