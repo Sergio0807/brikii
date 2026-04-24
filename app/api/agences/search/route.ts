@@ -23,12 +23,9 @@ export async function GET(request: NextRequest) {
     .from('agences')
     .select('id, nom, ville, type, adresse')
     .ilike('nom', `%${q}%`)
-    .is('deleted_at', null)
     .limit(10)
 
-  if (localError) {
-    console.error('[agences/search] Supabase error:', localError.message)
-  }
+  console.log('[agences/search] q=', q, 'results=', local?.length, 'error=', localError?.message)
 
   const localResults = (local ?? []).map(a => ({
     id:       a.id,
