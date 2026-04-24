@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import crypto from 'crypto'
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
     console.error('[webhook/n8n/biens] Payload invalide:', parsed.error.flatten())
     const maybeId = (rawJson as Record<string, unknown>)?.import_id as string | undefined
     if (maybeId) {
-      const supabase = await createClient()
+      const supabase = createAdminClient()
       await supabase.from('bien_imports').update({
         status: 'error',
         error_message: 'Payload invalide : ' + JSON.stringify(parsed.error.flatten()),
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
 
   // Si n8n signale lui-même une erreur de scraping
   if (data.import_status && data.import_status !== 'success') {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     await supabase.from('bien_imports').update({
       status: 'error',
       error_message: `Échec workflow n8n : import_status=${data.import_status}`,
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Import n8n en échec' }, { status: 422 })
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Vérifier que l'import existe
   const { data: importRow, error: importErr } = await supabase
