@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { BrikiiButton } from '@/components/shared/BrikiiButton'
 import { BrikiiInput } from '@/components/shared/BrikiiInput'
@@ -33,6 +33,7 @@ interface ImportState {
   fileName:     string
   createdAt:    number
   n8nAvailable: boolean
+  storagePath:  string
 }
 
 interface MandatFormProps {
@@ -59,11 +60,24 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
   // ── Import fichier ────────────────────────────────────────────────────────
   const fileInputRef                      = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile]   = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl]       = useState<string | null>(null)
   const [fileError, setFileError]         = useState<string | null>(null)
   const [dragging, setDragging]           = useState(false)
   const [importLoading, setImportLoading] = useState(false)
   const [importError, setImportError]     = useState<string | null>(null)
   const [importState, setImportState]     = useState<ImportState | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError]     = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!selectedFile?.type.startsWith('image/')) {
+      setPreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(selectedFile)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [selectedFile])
 
   // ── File helpers ──────────────────────────────────────────────────────────
 
@@ -168,17 +182,49 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
         return
       }
 
-      const result = await res.json() as { import_id: string; n8n_available: boolean }
+      const result = await res.json() as { import_id: string; n8n_available: boolean; storage_path: string }
       setImportState({
         importId:     result.import_id,
         fileName:     file.name,
         createdAt:    Date.now(),
         n8nAvailable: result.n8n_available,
+        storagePath:  result.storage_path,
       })
     } catch {
       setImportError('Erreur réseau. Veuillez réessayer.')
     } finally {
       setImportLoading(false)
+    }
+  }
+
+  function handleReplace() {
+    setImportState(null)
+    setSelectedFile(null)
+    setPreviewUrl(null)
+    setImportError(null)
+    setDeleteError(null)
+    // Réouvrir le sélecteur de fichier au prochain tick pour que le DOM soit prêt
+    setTimeout(() => fileInputRef.current?.click(), 50)
+  }
+
+  async function handleDeleteImport() {
+    if (!importState) return
+    setDeleteLoading(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch(`/api/mandats/import/${importState.importId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        setDeleteError(data.error ?? 'Erreur lors de la suppression.')
+        return
+      }
+      setImportState(null)
+      setSelectedFile(null)
+      setPreviewUrl(null)
+    } catch {
+      setDeleteError('Erreur réseau. Veuillez réessayer.')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -355,17 +401,48 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
 
           {importState && !importState.n8nAvailable ? (
             /* Fichier uploadé mais analyse non disponible */
-            <div
-              className="flex flex-col gap-3 px-4 py-3"
-              style={{ background: 'var(--brikii-bg-subtle)', border: '1px solid var(--brikii-border)', borderRadius: 'var(--brikii-radius-card)' }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">✅</span>
-                <p className="text-sm font-medium text-[var(--brikii-text)]">
-                  Fichier déposé avec succès
-                </p>
+            <div className="flex flex-col gap-4">
+
+              {/* Carte fichier */}
+              <div
+                className="flex items-center gap-3 px-4 py-3"
+                style={{ border: '1px solid var(--brikii-border)', borderRadius: 'var(--brikii-radius-card)' }}
+              >
+                {previewUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={previewUrl}
+                    alt="Aperçu"
+                    className="w-14 h-14 object-cover flex-shrink-0"
+                    style={{ borderRadius: 'var(--brikii-radius-input)' }}
+                  />
+                ) : (
+                  <div
+                    className="w-14 h-14 flex items-center justify-center flex-shrink-0 text-2xl"
+                    style={{ background: 'var(--brikii-bg-subtle)', borderRadius: 'var(--brikii-radius-input)' }}
+                  >
+                    📄
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-[var(--brikii-text)] truncate">
+                    {importState.fileName}
+                  </p>
+                  {selectedFile && (
+                    <p className="text-xs text-[var(--brikii-text-muted)]">
+                      {(selectedFile.size / 1024 / 1024).toFixed(1)} Mo
+                    </p>
+                  )}
+                  {importState.storagePath && (
+                    <p className="text-xs text-[var(--brikii-text-muted)] font-mono truncate mt-0.5">
+                      {importState.storagePath}
+                    </p>
+                  )}
+                </div>
+                <span className="text-[var(--brikii-success)] text-lg flex-shrink-0">✓</span>
               </div>
-              <p className="text-xs text-[var(--brikii-text-muted)]">{importState.fileName}</p>
+
+              {/* Message analyse indisponible */}
               <div
                 className="px-3 py-2"
                 style={{ background: 'var(--brikii-warning-bg)', borderRadius: 'var(--brikii-radius-input)' }}
@@ -375,9 +452,28 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
                   Votre fichier est conservé et pourra être traité ultérieurement.
                 </p>
               </div>
-              <BrikiiButton variant="ghost" size="sm" onClick={() => setTab('manuel')}>
-                Continuer en saisie manuelle
-              </BrikiiButton>
+
+              {deleteError && (
+                <p className="text-xs text-[var(--brikii-danger)]">{deleteError}</p>
+              )}
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-2">
+                <BrikiiButton variant="secondary" size="sm" onClick={handleReplace}>
+                  Remplacer le document
+                </BrikiiButton>
+                <BrikiiButton
+                  variant="ghost"
+                  size="sm"
+                  loading={deleteLoading}
+                  onClick={handleDeleteImport}
+                >
+                  Supprimer le document
+                </BrikiiButton>
+                <BrikiiButton variant="ghost" size="sm" onClick={() => setTab('manuel')}>
+                  Continuer en saisie manuelle
+                </BrikiiButton>
+              </div>
             </div>
           ) : importState ? (
             /* Fichier uploadé + n8n déclenché → polling */
