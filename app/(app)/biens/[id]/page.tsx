@@ -59,6 +59,13 @@ export default async function BienPage({ params }: PageProps) {
     .eq('bien_id', id)
     .order('ordre', { ascending: true })
 
+  const { data: mandats } = await supabase
+    .from('mandats')
+    .select('id, numero, type, statut, statut_metier, date_debut, date_fin, prix_vente, honoraires_pct')
+    .eq('bien_id', id)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+
   const title = [
     bien.reference,
     [TYPE_LABELS[bien.type] ?? bien.type, bien.ville].filter(Boolean).join(' '),
@@ -92,7 +99,7 @@ export default async function BienPage({ params }: PageProps) {
   return (
     <>
       <AppHeader back={back} title={title} subtitle={subtitle} actions={actions} />
-      <BienDetail bien={{ ...bien, details, photos: photos ?? [] }} />
+      <BienDetail bien={{ ...bien, details, photos: photos ?? [] }} mandats={mandats ?? []} />
     </>
   )
 }

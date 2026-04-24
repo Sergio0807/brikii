@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { BrikiiButton } from '@/components/shared/BrikiiButton'
 import { BrikiiInput } from '@/components/shared/BrikiiInput'
+import { BrikiiBadge } from '@/components/shared/BrikiiBadge'
 import { AdresseAutocomplete } from '@/components/shared/AdresseAutocomplete'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -70,6 +72,18 @@ interface Details {
 }
 
 interface Photo { id: string; url: string; ordre: number }
+
+interface MandatSummary {
+  id: string
+  numero: string
+  type: string
+  statut: string
+  statut_metier: string | null
+  date_debut: string
+  date_fin: string | null
+  prix_vente: number
+  honoraires_pct: number | null
+}
 
 interface Bien {
   id: string
@@ -167,7 +181,25 @@ function CheckField({ label, value, onChange }: { label: string; value: boolean;
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
-export function BienDetail({ bien: initial }: { bien: Bien }) {
+const MANDAT_TYPE_LABELS: Record<string, string> = {
+  exclusif: 'Exclusif', simple: 'Simple', semi_exclusif: 'Semi-exclusif',
+  recherche: 'Recherche', gestion: 'Gestion',
+}
+const MANDAT_STATUT_CONFIG: Record<string, { label: string; variant: 'neutral' | 'info' | 'warning' | 'success' | 'danger' | 'yellow' }> = {
+  brouillon:       { label: 'Brouillon',       variant: 'neutral' },
+  import_en_cours: { label: 'Import en cours',  variant: 'info' },
+  a_completer:     { label: 'À compléter',      variant: 'warning' },
+  pret_a_valider:  { label: 'Prêt à valider',   variant: 'yellow' },
+  actif:           { label: 'Actif',            variant: 'success' },
+}
+const MANDAT_METIER_CONFIG: Record<string, { label: string; variant: 'neutral' | 'info' | 'warning' | 'success' | 'danger' }> = {
+  expire: { label: 'Expiré', variant: 'danger' },
+  resilie: { label: 'Résilié', variant: 'danger' },
+  vendu: { label: 'Vendu', variant: 'info' },
+  archive: { label: 'Archivé', variant: 'neutral' },
+}
+
+export function BienDetail({ bien: initial, mandats = [] }: { bien: Bien; mandats?: MandatSummary[] }) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -537,15 +569,55 @@ export function BienDetail({ bien: initial }: { bien: Bien }) {
             </div>
           </div>
 
-          {/* Mandat placeholder */}
+          {/* Mandats */}
           <div
             className="p-5 flex flex-col gap-3"
             style={{ background: 'var(--brikii-bg)', border: '1px solid var(--brikii-border)', borderRadius: 'var(--brikii-radius-card)' }}
           >
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--brikii-text-muted)] border-b border-[var(--brikii-border)] pb-2">
-              Mandat
-            </h3>
-            <p className="text-sm text-[var(--brikii-text-muted)]">Aucun mandat enregistré.</p>
+            <div className="flex items-center justify-between border-b border-[var(--brikii-border)] pb-2">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--brikii-text-muted)]">
+                Mandats
+              </h3>
+              <Link href={`/mandats/nouveau?bien_id=${initial.id}`}>
+                <BrikiiButton variant="ghost" size="sm">Rattacher un mandat</BrikiiButton>
+              </Link>
+            </div>
+
+            {mandats.length === 0 ? (
+              <p className="text-sm text-[var(--brikii-text-muted)]">Aucun mandat enregistré.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {mandats.map(m => {
+                  const metierCfg = m.statut_metier ? MANDAT_METIER_CONFIG[m.statut_metier] : null
+                  const statutCfg = MANDAT_STATUT_CONFIG[m.statut] ?? { label: m.statut, variant: 'neutral' as const }
+                  return (
+                    <Link
+                      key={m.id}
+                      href={`/mandats/${m.id}`}
+                      className="flex items-center justify-between px-3 py-2 bg-[var(--brikii-bg-subtle)] hover:bg-[var(--brikii-border)] transition-colors"
+                      style={{ borderRadius: 'var(--brikii-radius-input)' }}
+                    >
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-xs font-medium text-[var(--brikii-text)]">
+                          {MANDAT_TYPE_LABELS[m.type] ?? m.type}
+                        </span>
+                        <span className="text-xs font-mono text-[var(--brikii-text-muted)]">{m.numero}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-semibold text-[var(--brikii-text)]">
+                          {m.prix_vente ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(m.prix_vente) : '—'}
+                        </span>
+                        {metierCfg ? (
+                          <BrikiiBadge variant={metierCfg.variant}>{metierCfg.label}</BrikiiBadge>
+                        ) : (
+                          <BrikiiBadge variant={statutCfg.variant}>{statutCfg.label}</BrikiiBadge>
+                        )}
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Propriétaire placeholder */}
