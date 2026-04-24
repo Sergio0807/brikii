@@ -570,55 +570,121 @@ export function BienDetail({ bien: initial, mandats = [] }: { bien: Bien; mandat
           </div>
 
           {/* Mandats */}
-          <div
-            className="p-5 flex flex-col gap-3"
-            style={{ background: 'var(--brikii-bg)', border: '1px solid var(--brikii-border)', borderRadius: 'var(--brikii-radius-card)' }}
-          >
-            <div className="flex items-center justify-between border-b border-[var(--brikii-border)] pb-2">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--brikii-text-muted)]">
-                Mandats
-              </h3>
-              <Link href={`/mandats/nouveau?bien_id=${initial.id}`}>
-                <BrikiiButton variant="ghost" size="sm">Rattacher un mandat</BrikiiButton>
-              </Link>
-            </div>
+          {(() => {
+            const fmtDate = (d: string | null) => d
+              ? new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(d))
+              : '—'
+            const fmtPrix = (v: number) =>
+              new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
 
-            {mandats.length === 0 ? (
-              <p className="text-sm text-[var(--brikii-text-muted)]">Aucun mandat enregistré.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {mandats.map(m => {
-                  const metierCfg = m.statut_metier ? MANDAT_METIER_CONFIG[m.statut_metier] : null
-                  const statutCfg = MANDAT_STATUT_CONFIG[m.statut] ?? { label: m.statut, variant: 'neutral' as const }
-                  return (
-                    <Link
-                      key={m.id}
-                      href={`/mandats/${m.id}`}
-                      className="flex items-center justify-between px-3 py-2 bg-[var(--brikii-bg-subtle)] hover:bg-[var(--brikii-border)] transition-colors"
-                      style={{ borderRadius: 'var(--brikii-radius-input)' }}
-                    >
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-xs font-medium text-[var(--brikii-text)]">
-                          {MANDAT_TYPE_LABELS[m.type] ?? m.type}
-                        </span>
-                        <span className="text-xs font-mono text-[var(--brikii-text-muted)]">{m.numero}</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs font-semibold text-[var(--brikii-text)]">
-                          {m.prix_vente ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(m.prix_vente) : '—'}
-                        </span>
-                        {metierCfg ? (
-                          <BrikiiBadge variant={metierCfg.variant}>{metierCfg.label}</BrikiiBadge>
-                        ) : (
-                          <BrikiiBadge variant={statutCfg.variant}>{statutCfg.label}</BrikiiBadge>
-                        )}
-                      </div>
-                    </Link>
-                  )
-                })}
+            const actif    = mandats.find(m => m.statut === 'actif' && !m.statut_metier) ?? null
+            const enCours  = mandats.filter(m => m !== actif && !m.statut_metier)
+            const historique = mandats.filter(m => !!m.statut_metier)
+
+            return (
+              <div
+                className="p-5 flex flex-col gap-3"
+                style={{ background: 'var(--brikii-bg)', border: '1px solid var(--brikii-border)', borderRadius: 'var(--brikii-radius-card)' }}
+              >
+                <div className="flex items-center justify-between border-b border-[var(--brikii-border)] pb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--brikii-text-muted)]">
+                    Mandats
+                  </h3>
+                  <Link href={`/mandats/nouveau?bien_id=${initial.id}`}>
+                    <BrikiiButton variant="ghost" size="sm">Rattacher un mandat</BrikiiButton>
+                  </Link>
+                </div>
+
+                {/* Mandat actif */}
+                {actif ? (
+                  <Link
+                    href={`/mandats/${actif.id}`}
+                    className="flex flex-col gap-2 px-3 py-3 bg-[var(--brikii-bg-subtle)] hover:bg-[var(--brikii-border)] transition-colors"
+                    style={{ borderRadius: 'var(--brikii-radius-input)' }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-[var(--brikii-text)]">
+                        {MANDAT_TYPE_LABELS[actif.type] ?? actif.type}
+                      </span>
+                      <BrikiiBadge variant="success">Actif</BrikiiBadge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--brikii-text-muted)]">
+                        {fmtDate(actif.date_debut)}{actif.date_fin ? ` → ${fmtDate(actif.date_fin)}` : ''}
+                      </span>
+                      <span className="text-xs font-semibold text-[var(--brikii-text)]">
+                        {fmtPrix(actif.prix_vente)}
+                        {actif.honoraires_pct != null ? ` · ${actif.honoraires_pct} %` : ''}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono text-[var(--brikii-text-muted)]">{actif.numero}</span>
+                  </Link>
+                ) : (
+                  <p className="text-sm text-[var(--brikii-text-muted)]">Aucun mandat actif.</p>
+                )}
+
+                {/* En cours */}
+                {enCours.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--brikii-text-muted)]">
+                      En cours
+                    </span>
+                    {enCours.map(m => {
+                      const cfg = MANDAT_STATUT_CONFIG[m.statut] ?? { label: m.statut, variant: 'neutral' as const }
+                      return (
+                        <Link
+                          key={m.id}
+                          href={`/mandats/${m.id}`}
+                          className="flex items-center justify-between px-3 py-2 bg-[var(--brikii-bg-subtle)] hover:bg-[var(--brikii-border)] transition-colors"
+                          style={{ borderRadius: 'var(--brikii-radius-input)' }}
+                        >
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="text-xs font-medium text-[var(--brikii-text)]">
+                              {MANDAT_TYPE_LABELS[m.type] ?? m.type}
+                            </span>
+                            <span className="text-xs font-mono text-[var(--brikii-text-muted)]">{m.numero}</span>
+                          </div>
+                          <BrikiiBadge variant={cfg.variant}>{cfg.label}</BrikiiBadge>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Historique */}
+                {historique.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--brikii-text-muted)]">
+                      Historique
+                    </span>
+                    {historique.map(m => {
+                      const cfg = MANDAT_METIER_CONFIG[m.statut_metier!] ?? { label: m.statut_metier, variant: 'neutral' as const }
+                      return (
+                        <Link
+                          key={m.id}
+                          href={`/mandats/${m.id}`}
+                          className="flex items-center justify-between px-3 py-2 bg-[var(--brikii-bg-subtle)] hover:bg-[var(--brikii-border)] transition-colors opacity-70 hover:opacity-100"
+                          style={{ borderRadius: 'var(--brikii-radius-input)' }}
+                        >
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="text-xs font-medium text-[var(--brikii-text)]">
+                              {MANDAT_TYPE_LABELS[m.type] ?? m.type}
+                            </span>
+                            <span className="text-xs text-[var(--brikii-text-muted)]">
+                              {fmtDate(m.date_debut)}{m.date_fin ? ` → ${fmtDate(m.date_fin)}` : ''}
+                            </span>
+                          </div>
+                          <BrikiiBadge variant={cfg.variant}>{cfg.label}</BrikiiBadge>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {mandats.length === 0 && null}
               </div>
-            )}
-          </div>
+            )
+          })()}
 
           {/* Propriétaire placeholder */}
           <div

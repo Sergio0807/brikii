@@ -52,10 +52,11 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
   const [manualError, setManualError]         = useState<string | null>(null)
 
   // ── Import PDF ────────────────────────────────────────────────────────────
-  const [importUrl, setImportUrl]           = useState('')
-  const [importLoading, setImportLoading]   = useState(false)
-  const [importError, setImportError]       = useState<string | null>(null)
-  const [importState, setImportState]       = useState<ImportState | null>(null)
+  const [importUrl, setImportUrl]             = useState('')
+  const [importLoading, setImportLoading]     = useState(false)
+  const [importError, setImportError]         = useState<string | null>(null)
+  const [importUnavailable, setImportUnavailable] = useState(false)
+  const [importState, setImportState]         = useState<ImportState | null>(null)
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -101,6 +102,7 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
 
   async function handleImport(url: string) {
     setImportError(null)
+    setImportUnavailable(false)
     setImportLoading(true)
     setImportState(null)
     try {
@@ -111,7 +113,13 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
       })
       if (!res.ok) {
         const data = await res.json() as { error?: unknown }
-        setImportError(typeof data.error === 'string' ? data.error : "Impossible de lancer l'import.")
+        const msg = typeof data.error === 'string' ? data.error : ''
+        // n8n non configuré → message dédié
+        if (res.status === 502 && (msg.includes('non configuré') || msg.includes('n8n'))) {
+          setImportUnavailable(true)
+          return
+        }
+        setImportError(msg || "Impossible de lancer l'import.")
         return
       }
       const result = await res.json() as { import_id: string }
@@ -290,7 +298,20 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
             </p>
           </div>
 
-          {!importState ? (
+          {importUnavailable ? (
+            <div className="flex flex-col gap-3 px-4 py-3 bg-[var(--brikii-warning-bg)] rounded-lg">
+              <p className="text-sm text-[var(--brikii-warning)]">
+                L&apos;import intelligent de documents n&apos;est pas encore disponible.
+              </p>
+              <p className="text-xs text-[var(--brikii-text-muted)]">
+                Le workflow d&apos;extraction automatique n&apos;est pas encore configuré.
+                Vous pouvez saisir les informations manuellement.
+              </p>
+              <BrikiiButton variant="ghost" size="sm" onClick={() => setTab('manuel')}>
+                Saisir manuellement
+              </BrikiiButton>
+            </div>
+          ) : !importState ? (
             <>
               <BrikiiInput
                 label="URL du document"
