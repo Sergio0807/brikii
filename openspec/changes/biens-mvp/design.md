@@ -49,50 +49,56 @@ Il n'y a **pas d'étape de revue obligatoire** avant insertion — le bien est c
 
 ---
 
-## Contrat JSON n8n → application (payload webhook)
+## Contrat JSON n8n → application (payload webhook réel)
+
+> ⚠️ Le contrat initial a évolué. L'adresse exacte est intentionnellement absente (donnée privée/sensible — logique Pass'Adresse). Les détails sont regroupés dans un bloc `attributes` libre multi-portail.
 
 ```json
 {
   "import_id": "uuid-de-l-import",
+  "import_status": "success",
   "source": {
     "url": "https://seloger.com/annonces/123456",
     "portail": "SeLoger"
   },
-  "bien": {
-    "type": "maison",
-    "adresse": "12 rue des Lilas",
-    "ville": "Albi",
-    "code_postal": "81000",
-    "prix": 479000,
-    "surface_hab": 206,
-    "descriptif": "Belle propriété..."
-  },
-  "details_type": {
-    "surface_terrain": 1700,
-    "nb_pieces": 8,
-    "nb_chambres": 7,
-    "nb_sdb": 1,
-    "etat_general": "bon",
-    "travaux": false,
-    "taxe_fonciere": 2400,
-    "dpe_lettre": "C",
-    "dpe_valeur": 145,
-    "garage": true,
-    "piscine": false
-  },
+  "reference": "REF-PORTAIL-123",
+  "type": "maison",
+  "prix": 479000,
+  "ville": "Albi",
+  "code_postal": "81000",
+  "descriptif": "Belle propriété...",
   "photos": [
-    { "cloudflare_image_id": "abc123xyz", "url": "https://imagedelivery.net/xxx/abc123xyz/public", "ordre": 1 },
-    { "cloudflare_image_id": "def456uvw", "url": "https://imagedelivery.net/xxx/def456uvw/public", "ordre": 2 }
-  ]
+    { "ordre": 0, "url": "https://cdn.example.com/photo.jpg", "source_key": "r2-key-abc123", "source_url": "https://original.com/photo.jpg" }
+  ],
+  "photos_count": 12,
+  "attributes": {
+    "surface_habitable": 206,
+    "surface_terrain": 1700,
+    "pieces": 8,
+    "chambres": 7,
+    "salle_de_bain": 1,
+    "salle_d_eau": 1,
+    "wc": 2,
+    "dpe_energy_class": "C",
+    "dpe_energy_value": 145,
+    "ges_class": "D",
+    "ges_value": 32,
+    "frais_agence": 18000,
+    "date_construction": "1985"
+  }
 }
 ```
 
 **Règles du contrat :**
-- `import_id` obligatoire — permet de retrouver l'enregistrement `bien_imports`
-- `source.url`, `bien.type`, `bien.adresse`, `bien.ville`, `bien.code_postal`, `bien.prix` obligatoires
-- `details_type` optionnel — contenu dépend du type ; champs inconnus ignorés silencieusement
-- `photos` optionnel — peut être absent ou vide
-- n8n est responsable de l'upload Cloudflare ; l'app reçoit uniquement des `cloudflare_image_id` déjà valides
+- `import_id` obligatoire
+- `type` obligatoire (enum `maison|appartement|terrain|immeuble|commerce|local|autre`)
+- `source.url` obligatoire ; `source.portail` optionnel
+- `adresse` absente par design — donnée privée non publiée sur les portails
+- `attributes` libre : champs connus mappés vers colonnes DB, reste → `metadata` JSONB
+- Mapping `attributes` → sous-table : `surface_habitable/terrain` → `biens`, `pieces→nb_pieces`, `chambres→nb_chambres`, `salle_de_bain→nb_sdb`, `dpe_energy_class→dpe_lettre` (validé A-G), `dpe_energy_value→dpe_valeur` (>0 seulement)
+- `photos[].source_key` → `bien_photos.cloudflare_image_id` (stockage R2, colonne renommée à terme)
+- `import_status != 'success'` → erreur immédiate, bien non créé
+- Échecs sous-table et photos non fatals (bien créé, détails ajoutables manuellement)
 
 ---
 
@@ -182,6 +188,18 @@ Protocole de vérification :
 - Aucune logique métier n'est exécutée avant validation de la signature
 
 Pattern identique aux webhooks Stripe. `N8N_WEBHOOK_SECRET` doit figurer dans `.env.example` avec une valeur vide et une note explicite.
+
+**8. Client admin Supabase dans le webhook (décision d'implémentation)**
+
+Le webhook n8n n'a pas de session utilisateur — il est appelé machine-to-machine. Le client Supabase standard (anon + cookies) est bloqué par RLS sur `bien_imports` et `biens`. Le webhook utilise `createAdminClient()` (`lib/supabase/admin.ts`) basé sur `SUPABASE_SERVICE_ROLE_KEY`, qui bypasse RLS. La sécurité repose sur la vérification HMAC (step 4).
+
+**9. Fiche bien — layout Direction A (hors scope initial, implémenté)**
+
+`app/(app)/biens/[id]/` ajouté avec layout 2 colonnes :
+- Gauche : placeholder photos + onglets (Aperçu actif, 5 désactivés) + description + caractéristiques
+- Droite : stats card (ref, type, surface, prix, €/m²) + placeholders Mandat et Propriétaire
+- `AppHeader` enrichi : props `back`, `subtitle` (badges statut), `minHeight`
+- `AdresseAutocomplete` : autocomplete api-adresse.data.gouv.fr, debounce 300ms, navigation clavier
 
 **5. Insertion sous-table limitée à maison + appartement**
 

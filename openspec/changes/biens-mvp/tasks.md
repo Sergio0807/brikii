@@ -3,7 +3,7 @@
 - [x] 1.1 Créer migration `bien_photos` : table avec `id`, `bien_id FK CASCADE`, `cloudflare_image_id`, `url`, `ordre`, `created_at` ; index sur `bien_id` ; RLS via `biens.user_id = auth.uid()`
 - [x] 1.2 Créer migration `bien_imports` : table avec `id`, `user_id FK`, `source_url`, `status` (enum `pending | scraping | mapping | completed | error`, default `pending`), `bien_id FK nullable`, `error_message`, `n8n_payload jsonb`, `created_at`, `updated_at` ; index sur `user_id` et `status` ; RLS (`user_id = auth.uid()`)
 - [x] 1.3 Créer migration : ajout colonne `a_verifier boolean NOT NULL DEFAULT false` sur `biens`
-- [ ] 1.4 Appliquer les trois migrations sur Supabase DEV
+- [x] 1.4 Appliquer les trois migrations sur Supabase DEV (via `migration repair --status applied` — tables créées manuellement avant)
 
 ## 2. API Route `/api/biens` (GET + POST — création manuelle)
 
@@ -69,3 +69,19 @@
 - [x] 8.1 Ajouter lien "Biens" dans la sidebar `app/(app)/layout.tsx`
 - [x] 8.2 Ajouter `/biens` dans `PROTECTED_PATHS` du proxy (`lib/supabase/proxy.ts`)
 - [x] 8.3 Ajouter `N8N_WEBHOOK_URL` et `N8N_WEBHOOK_SECRET` dans `.env.example` avec commentaires explicites (N8N_WEBHOOK_SECRET = secret partagé pour signature HMAC des callbacks)
+
+## 9. Fiche bien Direction A (hors scope initial)
+
+- [x] 9.1 Créer `app/(app)/biens/[id]/page.tsx` — header enrichi avec back, subtitle badges, actions
+- [x] 9.2 Créer `app/(app)/biens/[id]/BienDetail.tsx` — layout 2 colonnes lg:grid-cols-[3fr_2fr]
+- [x] 9.3 Créer `app/api/biens/[id]/route.ts` — GET bien + sous-table + photos, PATCH
+- [x] 9.4 Créer `components/shared/AdresseAutocomplete.tsx` — autocomplete api-adresse.data.gouv.fr
+- [x] 9.5 Étendre `AppHeader` — props back, subtitle ReactNode, minHeight
+
+## 10. Infrastructure et déploiement (hors scope initial)
+
+- [x] 10.1 Créer `lib/supabase/admin.ts` — createAdminClient avec SUPABASE_SERVICE_ROLE_KEY pour bypass RLS dans le webhook
+- [x] 10.2 Déploiement Vercel — intégration GitHub, variables d'env, build fixes Resend lazy init + Suspense useSearchParams
+- [x] 10.3 Fix auth flow — callback transmet error_code, login affiche messages erreur et confirmation
+- [x] 10.4 Root page — redirige vers /dashboard si connecté, /login sinon
+- [x] 10.5 Seed agences — 14 réseaux insérés en prod via Supabase SQL Editor
