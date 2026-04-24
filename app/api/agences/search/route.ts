@@ -19,21 +19,32 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient()
 
-  const { data: local } = await supabase
+  const { data: local, error: localError } = await supabase
     .from('agences')
-    .select('id, nom, ville, siret, logo_url, source, type')
-    .or(`nom.ilike.%${q}%,ville.ilike.%${q}%,siret.ilike.%${q}%`)
-    .eq('statut', 'active')
+    .select('id, nom, ville, type, adresse')
+    .ilike('nom', `%${q}%`)
     .is('deleted_at', null)
     .limit(10)
 
-  const localResults = (local ?? []).map(a => ({ ...a, source: a.source ?? 'brikii' }))
+  if (localError) {
+    console.error('[agences/search] Supabase error:', localError.message)
+  }
+
+  const localResults = (local ?? []).map(a => ({
+    id:       a.id,
+    nom:      a.nom,
+    ville:    a.ville ?? null,
+    type:     a.type ?? null,
+    siret:    null as string | null,
+    logo_url: null as string | null,
+    source:   'brikii',
+  }))
 
   let combined = localResults
   if (localResults.length < 3) {
     const sireneResults = await searchAgences(q)
-    const sireneIds = new Set(localResults.map(r => r.siret).filter(Boolean))
-    const newFromSirene = sireneResults.filter(r => !sireneIds.has(r.siret))
+    const localNoms = new Set(localResults.map(r => r.nom.toLowerCase()))
+    const newFromSirene = sireneResults.filter(r => !localNoms.has(r.nom.toLowerCase()))
     const sireneNormalized = newFromSirene.map(s => ({
       id:       undefined as string | undefined,
       nom:      s.nom,
