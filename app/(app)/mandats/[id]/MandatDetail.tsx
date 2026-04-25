@@ -20,13 +20,13 @@ const TYPE_LABELS: Record<string, string> = {
   exclusif: 'Exclusif', simple: 'Simple', semi_exclusif: 'Semi-exclusif',
   recherche: 'Recherche', gestion: 'Gestion',
 }
-const STATUT_LABELS: Record<string, string> = {
-  brouillon: 'Brouillon', import_en_cours: 'Import en cours',
-  a_completer: 'À compléter', pret_a_valider: 'Prêt à valider', actif: 'Actif',
-}
-const STATUT_METIER_LABELS: Record<string, string> = {
-  expire: 'Expiré', resilie: 'Résilié', vendu: 'Vendu', archive: 'Archivé',
-}
+const STATUT_UI_CONFIG = {
+  en_cours: { label: 'En cours', variant: 'success'  },
+  expire:   { label: 'Expiré',  variant: 'danger'   },
+  resilie:  { label: 'Résilié', variant: 'danger'   },
+  vendu:    { label: 'Vendu',   variant: 'info'      },
+  archive:  { label: 'Archivé', variant: 'neutral'   },
+} as const
 const HONO_CHARGE_LABELS: Record<string, string> = {
   vendeur: 'Vendeur', acquereur: 'Acquéreur', partage: 'Partagé',
 }
@@ -239,8 +239,9 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
   // Editable fields
   const [numeroMandat, setNumeroMandat]           = useState(initial.numero_mandat ?? '')
   const [type, setType]                           = useState(initial.type)
-  const [statut, setStatut]                       = useState(initial.statut)
-  const [statutMetier, setStatutMetier]           = useState(initial.statut_metier ?? '')
+  const [statutUi, setStatutUi]                   = useState<keyof typeof STATUT_UI_CONFIG>(
+    (initial.statut_metier as keyof typeof STATUT_UI_CONFIG | null) ?? 'en_cours'
+  )
   const [dateSignature, setDateSignature]         = useState(initial.date_signature)
   const [dateDebut, setDateDebut]                 = useState(initial.date_debut)
   const [dureeMois, setDureeMois]                 = useState(initial.duree_mois?.toString() ?? '')
@@ -254,8 +255,7 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
   function cancelEdit() {
     setNumeroMandat(initial.numero_mandat ?? '')
     setType(initial.type)
-    setStatut(initial.statut)
-    setStatutMetier(initial.statut_metier ?? '')
+    setStatutUi((initial.statut_metier as keyof typeof STATUT_UI_CONFIG | null) ?? 'en_cours')
     setDateSignature(initial.date_signature)
     setDateDebut(initial.date_debut)
     setDureeMois(initial.duree_mois?.toString() ?? '')
@@ -273,12 +273,6 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
     setSaving(true)
     setError(null)
 
-    if (statut === 'actif' && !initial.bien_id) {
-      setError('Un mandat actif doit être rattaché à un bien.')
-      setSaving(false)
-      return
-    }
-
     try {
       const res = await fetch(`/api/mandats/${initial.id}`, {
         method: 'PATCH',
@@ -286,8 +280,7 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
         body: JSON.stringify({
           numero_mandat:      numeroMandat || null,
           type,
-          statut,
-          statut_metier:      statutMetier || null,
+          statut_metier:      statutUi === 'en_cours' ? null : statutUi,
           date_signature:     dateSignature,
           date_debut:         dateDebut,
           duree_mois:         dureeMois ? parseInt(dureeMois) : null,
@@ -455,22 +448,15 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {initial.statut_metier ? (
-                  <BrikiiBadge variant="danger">
-                    {STATUT_METIER_LABELS[initial.statut_metier] ?? initial.statut_metier}
-                  </BrikiiBadge>
-                ) : (
-                  <BrikiiBadge variant={
-                    initial.statut === 'actif'           ? 'success' :
-                    initial.statut === 'pret_a_valider'  ? 'yellow'  :
-                    initial.statut === 'a_completer'     ? 'warning' :
-                    initial.statut === 'import_en_cours' ? 'info'    : 'neutral'
-                  }>
-                    {STATUT_LABELS[initial.statut] ?? initial.statut}
-                  </BrikiiBadge>
-                )}
-              </div>
+              {(() => {
+                const key = (initial.statut_metier as keyof typeof STATUT_UI_CONFIG | null) ?? 'en_cours'
+                const cfg = STATUT_UI_CONFIG[key] ?? STATUT_UI_CONFIG.en_cours
+                return (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <BrikiiBadge variant={cfg.variant}>{cfg.label}</BrikiiBadge>
+                  </div>
+                )
+              })()}
 
               <div className="pt-1 border-t border-[var(--brikii-border)]">
                 <span className="text-3xl font-bold text-[var(--brikii-text)]">{formatPrix(initial.prix_vente)}</span>
@@ -610,31 +596,18 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
             required
           />
           <SelectField
-            label="Statut workflow"
-            value={statut}
-            onChange={v => setStatut(v as typeof statut)}
-            options={STATUTS.map(s => ({ value: s, label: STATUT_LABELS[s] }))}
+            label="Statut du mandat"
+            value={statutUi}
+            onChange={v => setStatutUi(v as keyof typeof STATUT_UI_CONFIG)}
+            options={[
+              { value: 'en_cours', label: 'En cours' },
+              { value: 'expire',   label: 'Expiré' },
+              { value: 'resilie',  label: 'Résilié' },
+              { value: 'vendu',    label: 'Vendu' },
+              { value: 'archive',  label: 'Archivé' },
+            ]}
           />
         </div>
-        <SelectField
-          label="Statut métier"
-          value={statutMetier}
-          onChange={setStatutMetier}
-          options={[
-            { value: '', label: '— En cours —' },
-            ...STATUTS_METIER.map(s => ({ value: s, label: STATUT_METIER_LABELS[s] })),
-          ]}
-        />
-        {statut === 'actif' && !initial.bien_id && (
-          <p className="text-xs text-[var(--brikii-warning)]">
-            ⚠ Un bien doit être rattaché avant de passer ce mandat en statut &quot;Actif&quot;.
-          </p>
-        )}
-        {statut === 'actif' && initial.bien && (initial.bien.deleted_at != null || initial.bien.statut === 'archive') && (
-          <p className="text-xs text-[var(--brikii-warning)]">
-            ⚠ Le bien rattaché est {initial.bien.deleted_at != null ? 'supprimé' : 'archivé'} — impossible de passer en statut &quot;Actif&quot;.
-          </p>
-        )}
       </Card>
 
       {/* Dates */}

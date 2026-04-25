@@ -13,20 +13,13 @@ const TYPE_LABELS: Record<string, string> = {
   gestion:       'Gestion',
 }
 
-const STATUT_CONFIG: Record<string, { label: string; variant: 'neutral' | 'info' | 'warning' | 'success' | 'danger' | 'yellow' }> = {
-  brouillon:       { label: 'Brouillon',       variant: 'neutral' },
-  import_en_cours: { label: 'Import en cours',  variant: 'info' },
-  a_completer:     { label: 'À compléter',      variant: 'warning' },
-  pret_a_valider:  { label: 'Prêt à valider',   variant: 'yellow' },
-  actif:           { label: 'Actif',            variant: 'success' },
-}
-
-const STATUT_METIER_CONFIG: Record<string, { label: string; variant: 'neutral' | 'info' | 'warning' | 'success' | 'danger' }> = {
-  expire:  { label: 'Expiré',  variant: 'danger' },
-  resilie: { label: 'Résilié', variant: 'danger' },
-  vendu:   { label: 'Vendu',   variant: 'info' },
-  archive: { label: 'Archivé', variant: 'neutral' },
-}
+const STATUT_UI_CONFIG = {
+  en_cours: { label: 'En cours', variant: 'success'  },
+  expire:   { label: 'Expiré',  variant: 'danger'   },
+  resilie:  { label: 'Résilié', variant: 'danger'   },
+  vendu:    { label: 'Vendu',   variant: 'info'      },
+  archive:  { label: 'Archivé', variant: 'neutral'   },
+} as const
 
 type PageProps = { params: Promise<{ id: string }> }
 
@@ -52,8 +45,8 @@ export default async function MandatPage({ params }: PageProps) {
   if (!mandat) notFound()
 
   const typeLabel = TYPE_LABELS[mandat.type] ?? mandat.type
-  const statutCfg = STATUT_CONFIG[mandat.statut] ?? { label: mandat.statut, variant: 'neutral' as const }
-  const metierCfg = mandat.statut_metier ? STATUT_METIER_CONFIG[mandat.statut_metier] : null
+  const statutUiKey = (mandat.statut_metier as keyof typeof STATUT_UI_CONFIG | null) ?? 'en_cours'
+  const statutUiCfg = STATUT_UI_CONFIG[statutUiKey] ?? STATUT_UI_CONFIG.en_cours
 
   const back = (
     <Link
@@ -66,11 +59,7 @@ export default async function MandatPage({ params }: PageProps) {
 
   const subtitle = (
     <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-      {metierCfg ? (
-        <BrikiiBadge variant={metierCfg.variant}>{metierCfg.label}</BrikiiBadge>
-      ) : (
-        <BrikiiBadge variant={statutCfg.variant}>{statutCfg.label}</BrikiiBadge>
-      )}
+      <BrikiiBadge variant={statutUiCfg.variant}>{statutUiCfg.label}</BrikiiBadge>
     </div>
   )
 
