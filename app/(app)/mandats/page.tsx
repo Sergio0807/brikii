@@ -166,8 +166,8 @@ function BienPhoto({ photos, size = 'sm' }: { photos: PhotoShape[] | null | unde
   const thumbUrl = bienPhotoThumbUrl(firstUrl, size === 'sm' ? 120 : 200)
 
   const dim = size === 'sm'
-    ? 'w-20 h-16 flex-shrink-0'
-    : 'w-28 h-24 flex-shrink-0'
+    ? 'w-14 h-11 sm:w-20 sm:h-16 flex-shrink-0'
+    : 'w-20 h-16 sm:w-28 sm:h-24 flex-shrink-0'
 
   if (!thumbUrl) {
     return (
