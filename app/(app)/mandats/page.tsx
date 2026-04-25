@@ -62,6 +62,8 @@ type BienShape = {
   bien_photos: PhotoShape[] | null
 }
 
+type DocShape = { id: string; nom: string; taille: number | null }
+
 type MandatRow = {
   id: string
   numero: string
@@ -76,6 +78,7 @@ type MandatRow = {
   created_at: string
   // Supabase retourne la relation comme tableau ou objet selon le client — on accepte les deux
   bien: BienShape[] | BienShape | null
+  documents: DocShape[] | null
 }
 
 type ImportRow = {
@@ -98,7 +101,7 @@ export default async function MandatsPage() {
   const [{ data: mandats }, { data: imports }] = await Promise.all([
     supabase
       .from('mandats')
-      .select('id, numero, numero_mandat, type, statut, statut_metier, bien_id, date_debut, prix_vente, honoraires_pct, created_at, bien:biens(id, reference, type, ville, code_postal, surface_hab, bien_photos(url, ordre))')
+      .select('id, numero, numero_mandat, type, statut, statut_metier, bien_id, date_debut, prix_vente, honoraires_pct, created_at, bien:biens(id, reference, type, ville, code_postal, surface_hab, bien_photos(url, ordre)), documents:mandat_documents(id, nom, taille)')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(100),
@@ -193,6 +196,8 @@ function MandatCard({ mandat: m }: { mandat: MandatRow }) {
   const statutUiKey = (m.statut_metier as keyof typeof STATUT_UI_CONFIG | null) ?? 'en_cours'
   const statutUiCfg = STATUT_UI_CONFIG[statutUiKey] ?? STATUT_UI_CONFIG.en_cours
   const bien: BienShape | null = Array.isArray(m.bien) ? (m.bien[0] ?? null) : m.bien
+  const docs = Array.isArray(m.documents) ? m.documents : []
+  const primaryDoc: DocShape | null = docs[0] ?? null
 
   const bienTypeLabel = bien?.type ? BIEN_TYPE_LABELS[bien.type] ?? bien.type : null
   const bienRef = bien?.reference ?? bienTypeLabel
@@ -248,11 +253,48 @@ function MandatCard({ mandat: m }: { mandat: MandatRow }) {
               </span>
             )}
 
+            {/* Indicateur document */}
+            {primaryDoc ? (
+              <div className="flex items-center gap-1.5 text-xs">
+                <FileText className="w-3 h-3 shrink-0" style={{ color: '#22c55e' }} />
+                <span
+                  className="text-[var(--brikii-text-muted)] truncate"
+                  style={{ maxWidth: 180 }}
+                  title={primaryDoc.nom}
+                >
+                  {primaryDoc.nom}
+                </span>
+                {primaryDoc.taille && (
+                  <span className="text-[var(--brikii-text-muted)] shrink-0">
+                    · {Math.round(primaryDoc.taille / 1024)} ko
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--brikii-warning, #f59e0b)' }}>
+                <FileText className="w-3 h-3 shrink-0" />
+                <span>Document manquant</span>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <Link href={`/mandats/${m.id}`}>
-                <BrikiiButton variant="secondary" size="sm">Ouvrir</BrikiiButton>
+                <BrikiiButton variant="secondary" size="sm">Voir la fiche</BrikiiButton>
               </Link>
+              {primaryDoc ? (
+                <a
+                  href={`/api/mandats/${m.id}/documents/${primaryDoc.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <BrikiiButton variant="ghost" size="sm">Voir le document</BrikiiButton>
+                </a>
+              ) : (
+                <Link href={`/mandats/${m.id}`}>
+                  <BrikiiButton variant="ghost" size="sm">Déposer le document</BrikiiButton>
+                </Link>
+              )}
               {!m.bien_id && (
                 <Link href={`/mandats/${m.id}/rattacher-bien`}>
                   <BrikiiButton variant="ghost" size="sm">Rattacher un bien</BrikiiButton>
