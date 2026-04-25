@@ -61,7 +61,7 @@ export default async function BienPage({ params }: PageProps) {
 
   const { data: mandats } = await supabase
     .from('mandats')
-    .select('id, numero, type, statut, statut_metier, date_debut, date_fin, prix_vente, honoraires_pct')
+    .select('id, numero, numero_mandat, type, statut, statut_metier, date_debut, date_fin, prix_vente, honoraires_pct')
     .eq('bien_id', id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
