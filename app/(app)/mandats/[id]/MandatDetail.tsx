@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { BrikiiButton } from '@/components/shared/BrikiiButton'
 import { BrikiiInput } from '@/components/shared/BrikiiInput'
 import { BrikiiBadge } from '@/components/shared/BrikiiBadge'
+import { bienPhotoThumbUrl } from '@/lib/cloudflare-images'
+import { Home } from 'lucide-react'
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -41,6 +43,11 @@ const ROLE_LABELS: Record<string, string> = {
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
+interface BienPhoto {
+  url: string
+  ordre: number
+}
+
 interface BienRef {
   id: string
   reference?: string | null
@@ -49,6 +56,7 @@ interface BienRef {
   code_postal?: string | null
   prix?: number | null
   surface_hab?: number | null
+  bien_photos?: BienPhoto[] | null
 }
 
 interface Contact {
@@ -163,6 +171,35 @@ function SelectField({ label, value, onChange, options, required }: {
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
+  )
+}
+
+// ─── Bien thumbnail ────────────────────────────────────────────────────────────
+
+function BienThumb({ photos }: { photos?: BienPhoto[] | null }) {
+  const sorted = photos ? [...photos].sort((a, b) => a.ordre - b.ordre) : []
+  const thumbUrl = bienPhotoThumbUrl(sorted[0]?.url, 200)
+
+  if (!thumbUrl) {
+    return (
+      <div
+        className="w-20 h-16 flex-shrink-0 flex items-center justify-center"
+        style={{ background: 'var(--brikii-bg-subtle)', borderRadius: 'var(--brikii-radius-input)' }}
+      >
+        <Home className="w-5 h-5 text-[var(--brikii-text-muted)]" />
+      </div>
+    )
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={thumbUrl}
+      alt="Photo du bien"
+      className="w-20 h-16 flex-shrink-0 object-cover"
+      style={{ borderRadius: 'var(--brikii-radius-input)' }}
+      loading="lazy"
+    />
   )
 }
 
@@ -391,21 +428,25 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
               </h3>
               {bien ? (
                 <div className="flex flex-col gap-3">
+                  {/* Photo + infos */}
                   <Link
                     href={`/biens/${bien.id}`}
-                    className="flex flex-col gap-0.5 hover:opacity-80 transition-opacity"
+                    className="flex gap-3 hover:opacity-80 transition-opacity"
                   >
-                    <span className="text-sm font-medium text-[var(--brikii-dark)] underline underline-offset-2">
-                      {bien.reference ?? (bien.type ? BIEN_TYPE_LABELS[bien.type] ?? bien.type : '—')}
-                    </span>
-                    {(bien.ville || bien.code_postal) && (
-                      <span className="text-xs text-[var(--brikii-text-muted)]">
-                        {[bien.ville, bien.code_postal && `(${bien.code_postal})`].filter(Boolean).join(' ')}
+                    <BienThumb photos={bien.bien_photos} />
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className="text-sm font-medium text-[var(--brikii-dark)] underline underline-offset-2">
+                        {bien.reference ?? (bien.type ? BIEN_TYPE_LABELS[bien.type] ?? bien.type : '—')}
                       </span>
-                    )}
-                    {bien.surface_hab && (
-                      <span className="text-xs text-[var(--brikii-text-muted)]">{bien.surface_hab} m²</span>
-                    )}
+                      {(bien.ville || bien.code_postal) && (
+                        <span className="text-xs text-[var(--brikii-text-muted)]">
+                          {[bien.ville, bien.code_postal && `(${bien.code_postal})`].filter(Boolean).join(' ')}
+                        </span>
+                      )}
+                      {bien.surface_hab && (
+                        <span className="text-xs text-[var(--brikii-text-muted)]">{bien.surface_hab} m²</span>
+                      )}
+                    </div>
                   </Link>
                   <Link href={`/mandats/${initial.id}/rattacher-bien`}>
                     <BrikiiButton variant="ghost" size="sm">Changer de bien</BrikiiButton>

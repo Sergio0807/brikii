@@ -4,7 +4,8 @@ import { AppHeader } from '@/components/shared/AppHeader'
 import { BrikiiCard } from '@/components/shared/BrikiiCard'
 import { BrikiiBadge } from '@/components/shared/BrikiiBadge'
 import { BrikiiButton } from '@/components/shared/BrikiiButton'
-import { FileText } from 'lucide-react'
+import { bienPhotoThumbUrl } from '@/lib/cloudflare-images'
+import { FileText, Home } from 'lucide-react'
 
 // ── Labels et configs ─────────────────────────────────────────────────────────
 
@@ -56,7 +57,17 @@ function fileNameFromPath(sourcePath: string | null): string {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type BienShape = { ville: string | null; code_postal: string | null }
+type PhotoShape = { url: string; ordre: number }
+
+type BienShape = {
+  id: string | null
+  reference: string | null
+  type: string | null
+  ville: string | null
+  code_postal: string | null
+  surface_hab: number | null
+  bien_photos: PhotoShape[] | null
+}
 
 type MandatRow = {
   id: string
@@ -94,7 +105,7 @@ export default async function MandatsPage() {
   const [{ data: mandats }, { data: imports }] = await Promise.all([
     supabase
       .from('mandats')
-      .select('id, numero, numero_mandat, type, statut, statut_metier, bien_id, date_debut, prix_vente, honoraires_pct, created_at, bien:biens(ville, code_postal)')
+      .select('id, numero, numero_mandat, type, statut, statut_metier, bien_id, date_debut, prix_vente, honoraires_pct, created_at, bien:biens(id, reference, type, ville, code_postal, surface_hab, bien_photos(url, ordre))')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(100),
@@ -148,70 +159,133 @@ export default async function MandatsPage() {
 
 // ── Carte Mandat ──────────────────────────────────────────────────────────────
 
+const BIEN_TYPE_LABELS: Record<string, string> = {
+  maison: 'Maison', appartement: 'Appartement', terrain: 'Terrain',
+  immeuble: 'Immeuble', commerce: 'Commerce', local: 'Local', autre: 'Autre',
+}
+
+function BienPhoto({ photos, size = 'sm' }: { photos: PhotoShape[] | null | undefined; size?: 'sm' | 'md' }) {
+  const sorted = photos ? [...photos].sort((a, b) => a.ordre - b.ordre) : []
+  const firstUrl = sorted[0]?.url ?? null
+  const thumbUrl = bienPhotoThumbUrl(firstUrl, size === 'sm' ? 120 : 200)
+
+  const dim = size === 'sm'
+    ? 'w-20 h-16 flex-shrink-0'
+    : 'w-28 h-24 flex-shrink-0'
+
+  if (!thumbUrl) {
+    return (
+      <div
+        className={`${dim} flex items-center justify-center`}
+        style={{ background: 'var(--brikii-bg-subtle)', borderRadius: 'var(--brikii-radius-input)' }}
+      >
+        <Home className="w-5 h-5 text-[var(--brikii-text-muted)]" />
+      </div>
+    )
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={thumbUrl}
+      alt="Photo du bien"
+      className={`${dim} object-cover`}
+      style={{ borderRadius: 'var(--brikii-radius-input)' }}
+      loading="lazy"
+    />
+  )
+}
+
 function MandatCard({ mandat: m }: { mandat: MandatRow }) {
   const statutCfg = STATUT_CONFIG[m.statut] ?? { label: m.statut, variant: 'neutral' as const }
   const metierCfg = m.statut_metier ? STATUT_METIER_CONFIG[m.statut_metier] : null
   const bien: BienShape | null = Array.isArray(m.bien) ? (m.bien[0] ?? null) : m.bien
-  const bienLabel = bien?.ville
-    ? `${bien.ville}${bien.code_postal ? ` (${bien.code_postal})` : ''}`
-    : null
+
+  const bienTypeLabel = bien?.type ? BIEN_TYPE_LABELS[bien.type] ?? bien.type : null
+  const bienRef = bien?.reference ?? bienTypeLabel
+  const bienVille = bien?.ville ?? null
 
   return (
     <BrikiiCard padding="sm">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-[var(--brikii-text)]">
-              {m.numero_mandat ? `n° ${m.numero_mandat}` : 'Sans numéro'}
-            </span>
-            <span className="text-sm text-[var(--brikii-text-muted)]">—</span>
-            <span className="text-sm text-[var(--brikii-text-muted)]">{TYPE_LABELS[m.type] ?? m.type}</span>
-            {!bienLabel && <BrikiiBadge variant="neutral">Aucun bien rattaché</BrikiiBadge>}
-          </div>
+      <div className="flex items-start gap-3">
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-mono text-[var(--brikii-text-muted)]">{m.numero}</span>
-            {bienLabel && (
-              <>
-                <span className="text-xs text-[var(--brikii-text-muted)]">·</span>
-                <span className="text-xs text-[var(--brikii-text-muted)] truncate">{bienLabel}</span>
-              </>
+        {/* Miniature bien */}
+        <BienPhoto photos={bien?.bien_photos} size="sm" />
+
+        {/* Contenu */}
+        <div className="flex items-start justify-between gap-4 flex-1 min-w-0">
+          <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+
+            {/* Numéro + type */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-[var(--brikii-text)]">
+                {m.numero_mandat ? `n° ${m.numero_mandat}` : 'Sans numéro'}
+              </span>
+              <span className="text-sm text-[var(--brikii-text-muted)]">—</span>
+              <span className="text-sm text-[var(--brikii-text-muted)]">{TYPE_LABELS[m.type] ?? m.type}</span>
+            </div>
+
+            {/* Info bien */}
+            {bien ? (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {bienRef && (
+                  <span className="text-xs font-medium text-[var(--brikii-text)]">{bienRef}</span>
+                )}
+                {bienVille && (
+                  <>
+                    {bienRef && <span className="text-xs text-[var(--brikii-text-muted)]">·</span>}
+                    <span className="text-xs text-[var(--brikii-text-muted)]">{bienVille}</span>
+                  </>
+                )}
+                {bien.surface_hab && (
+                  <>
+                    <span className="text-xs text-[var(--brikii-text-muted)]">·</span>
+                    <span className="text-xs text-[var(--brikii-text-muted)]">{bien.surface_hab} m²</span>
+                  </>
+                )}
+              </div>
+            ) : (
+              <BrikiiBadge variant="neutral">Aucun bien rattaché</BrikiiBadge>
             )}
+
+            {/* Date */}
             {m.date_debut && (
               <span className="text-xs text-[var(--brikii-text-muted)]">
-                · début {formatDate(m.date_debut)}
+                Début {formatDate(m.date_debut)}
               </span>
             )}
-          </div>
 
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <Link href={`/mandats/${m.id}`}>
-              <BrikiiButton variant="secondary" size="sm">Ouvrir</BrikiiButton>
-            </Link>
-            {!m.bien_id && (
+            {/* Actions */}
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <Link href={`/mandats/${m.id}`}>
-                <BrikiiButton variant="ghost" size="sm">Rattacher à un bien</BrikiiButton>
+                <BrikiiButton variant="secondary" size="sm">Ouvrir</BrikiiButton>
               </Link>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end gap-2 shrink-0">
-          {metierCfg ? (
-            <BrikiiBadge variant={metierCfg.variant}>{metierCfg.label}</BrikiiBadge>
-          ) : (
-            <BrikiiBadge variant={statutCfg.variant}>{statutCfg.label}</BrikiiBadge>
-          )}
-          {m.prix_vente != null && m.prix_vente > 0 && (
-            <div className="text-right">
-              <div className="text-sm font-semibold text-[var(--brikii-text)]">
-                {formatPrix(m.prix_vente)}
-              </div>
-              {m.honoraires_pct != null && (
-                <div className="text-xs text-[var(--brikii-text-muted)]">{m.honoraires_pct} %</div>
+              {!m.bien_id && (
+                <Link href={`/mandats/${m.id}/rattacher-bien`}>
+                  <BrikiiButton variant="ghost" size="sm">Rattacher un bien</BrikiiButton>
+                </Link>
               )}
             </div>
-          )}
+          </div>
+
+          {/* Statut + prix */}
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            {metierCfg ? (
+              <BrikiiBadge variant={metierCfg.variant}>{metierCfg.label}</BrikiiBadge>
+            ) : (
+              <BrikiiBadge variant={statutCfg.variant}>{statutCfg.label}</BrikiiBadge>
+            )}
+            {m.prix_vente != null && m.prix_vente > 0 && (
+              <div className="text-right">
+                <div className="text-sm font-semibold text-[var(--brikii-text)]">
+                  {formatPrix(m.prix_vente)}
+                </div>
+                {m.honoraires_pct != null && (
+                  <div className="text-xs text-[var(--brikii-text-muted)]">{m.honoraires_pct} %</div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </BrikiiCard>
