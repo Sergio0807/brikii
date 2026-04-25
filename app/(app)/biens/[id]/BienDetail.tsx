@@ -312,12 +312,18 @@ export function BienDetail({ bien: initial, mandats = [] }: { bien: Bien; mandat
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type, statut, adresse, ville, code_postal: codePostal,
-          prix: prix ? parseInt(prix) : null,
-          surface_hab: surfaceHab ? parseFloat(surfaceHab) : null,
+          type,
+          statut,
+          // N'envoyer adresse/ville/cp que s'ils sont non-vides :
+          // une chaîne vide '' échoue à min(1) dans le patchSchema
+          ...(adresse    ? { adresse }                : {}),
+          ...(ville      ? { ville }                  : {}),
+          ...(codePostal ? { code_postal: codePostal }: {}),
+          prix:            prix        ? parseInt(prix)         : null,
+          surface_hab:     surfaceHab  ? parseFloat(surfaceHab) : null,
           surface_terrain: surfaceTerrain ? parseFloat(surfaceTerrain) : null,
-          descriptif: descriptif || null,
-          a_verifier: aVerifier,
+          descriptif:      descriptif || null,
+          a_verifier:      aVerifier,
           ...(details ? { details } : {}),
         }),
       })
