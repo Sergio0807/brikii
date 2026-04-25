@@ -65,6 +65,21 @@ export async function POST(req: NextRequest) {
 
   const d = parsed.data
 
+  // Vérifier ownership du bien si fourni
+  if (d.bien_id) {
+    const { data: bien } = await supabase
+      .from('biens')
+      .select('id')
+      .eq('id', d.bien_id)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .single()
+
+    if (!bien) {
+      return NextResponse.json({ error: 'Bien introuvable ou non autorisé' }, { status: 403 })
+    }
+  }
+
   const { data, error } = await supabase
     .from('mandats')
     .insert({

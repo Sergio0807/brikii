@@ -78,6 +78,21 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
   const updates = parsed.data
 
+  // Vérifier ownership du bien si bien_id est modifié
+  if ('bien_id' in updates && updates.bien_id) {
+    const { data: bien } = await supabase
+      .from('biens')
+      .select('id')
+      .eq('id', updates.bien_id)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .single()
+
+    if (!bien) {
+      return NextResponse.json({ error: 'Bien introuvable ou non autorisé' }, { status: 403 })
+    }
+  }
+
   // Enforce: statut actif ⇒ bien_id must be non-null (from update or existing)
   const finalBienId = 'bien_id' in updates ? updates.bien_id : existing.bien_id
   if (updates.statut === 'actif' && !finalBienId) {
