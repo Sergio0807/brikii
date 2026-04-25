@@ -7,6 +7,7 @@ import { BrikiiButton } from '@/components/shared/BrikiiButton'
 import { BrikiiInput } from '@/components/shared/BrikiiInput'
 import { BrikiiBadge } from '@/components/shared/BrikiiBadge'
 import { bienPhotoThumbUrl } from '@/lib/cloudflare-images'
+import { MandatDureeBar } from '@/components/shared/MandatDureeBar'
 import { Home } from 'lucide-react'
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -457,6 +458,8 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
                   </div>
                 )
               })()}
+
+              <MandatDureeBar date_debut={initial.date_debut} date_fin={initial.date_fin} />
 
               <div className="pt-1 border-t border-[var(--brikii-border)]">
                 <span className="text-3xl font-bold text-[var(--brikii-text)]">{formatPrix(initial.prix_vente)}</span>

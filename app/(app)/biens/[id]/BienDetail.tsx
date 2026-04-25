@@ -7,6 +7,7 @@ import { BrikiiButton } from '@/components/shared/BrikiiButton'
 import { BrikiiInput } from '@/components/shared/BrikiiInput'
 import { BrikiiBadge } from '@/components/shared/BrikiiBadge'
 import { AdresseAutocomplete } from '@/components/shared/AdresseAutocomplete'
+import { MandatDureeBar } from '@/components/shared/MandatDureeBar'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -627,7 +628,7 @@ export function BienDetail({ bien: initial, mandats = [] }: { bien: Bien; mandat
                             {m.honoraires_pct != null ? ` · ${m.honoraires_pct} %` : ''}
                           </span>
                         </div>
-                        <span className="text-xs font-mono text-[var(--brikii-text-muted)]">{m.numero}</span>
+                        <MandatDureeBar date_debut={m.date_debut} date_fin={m.date_fin} />
                       </Link>
                     ))}
                   </div>
