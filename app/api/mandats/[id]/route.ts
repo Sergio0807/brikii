@@ -93,13 +93,34 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     }
   }
 
-  // Enforce: statut actif ⇒ bien_id must be non-null (from update or existing)
+  // Enforce: statut actif ⇒ bien_id must be non-null, not deleted, not archived
   const finalBienId = 'bien_id' in updates ? updates.bien_id : existing.bien_id
   if (updates.statut === 'actif' && !finalBienId) {
     return NextResponse.json(
       { error: 'Un mandat actif doit être rattaché à un bien' },
       { status: 400 }
     )
+  }
+  if (updates.statut === 'actif' && finalBienId) {
+    const { data: bienCheck } = await supabase
+      .from('biens')
+      .select('statut')
+      .eq('id', finalBienId)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .single()
+    if (!bienCheck) {
+      return NextResponse.json(
+        { error: 'Le bien rattaché est introuvable ou supprimé' },
+        { status: 400 }
+      )
+    }
+    if (bienCheck.statut === 'archive') {
+      return NextResponse.json(
+        { error: 'Impossible de rendre actif un mandat rattaché à un bien archivé' },
+        { status: 400 }
+      )
+    }
   }
 
   const { error } = await supabase

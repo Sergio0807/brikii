@@ -52,6 +52,8 @@ interface BienRef {
   id: string
   reference?: string | null
   type?: string | null
+  statut?: string | null
+  deleted_at?: string | null
   ville?: string | null
   code_postal?: string | null
   prix?: number | null
@@ -207,9 +209,32 @@ function BienThumb({ photos }: { photos?: BienPhoto[] | null }) {
 
 export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
   const router = useRouter()
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving]   = useState(false)
-  const [error, setError]     = useState<string | null>(null)
+  const [editing, setEditing]     = useState(false)
+  const [saving, setSaving]       = useState(false)
+  const [archiving, setArchiving] = useState(false)
+  const [error, setError]         = useState<string | null>(null)
+
+  async function handleArchiver() {
+    if (!confirm('Archiver ce mandat ? Cette action ne supprime aucune donnée.')) return
+    setArchiving(true)
+    try {
+      const res = await fetch(`/api/mandats/${initial.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut_metier: 'archive' }),
+      })
+      if (!res.ok) {
+        const d = await res.json() as { error?: unknown }
+        setError(typeof d.error === 'string' ? d.error : 'Erreur lors de l\'archivage.')
+        return
+      }
+      router.refresh()
+    } catch {
+      setError('Erreur réseau. Veuillez réessayer.')
+    } finally {
+      setArchiving(false)
+    }
+  }
 
   // Editable fields
   const [numeroMandat, setNumeroMandat]           = useState(initial.numero_mandat ?? '')
@@ -292,16 +317,53 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
 
   if (!editing) {
     const bien = initial.bien
+    const bienIncoherent = bien && (bien.deleted_at != null || bien.statut === 'archive')
 
     return (
       <div className="flex flex-col gap-5">
 
         {/* Barre d'actions */}
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {error && (
+            <p className="text-sm text-[var(--brikii-danger)] self-center mr-2">{error}</p>
+          )}
           <BrikiiButton onClick={() => setEditing(true)}>
             Modifier le mandat
           </BrikiiButton>
         </div>
+
+        {/* Alerte bien archivé / supprimé */}
+        {bienIncoherent && (
+          <div
+            className="px-4 py-4 flex flex-col gap-3"
+            style={{ background: 'var(--brikii-warning-bg, #fffbeb)', border: '1px solid var(--brikii-warning, #f59e0b)', borderRadius: 'var(--brikii-radius-card)' }}
+          >
+            <p className="text-sm font-medium text-[var(--brikii-warning, #b45309)]">
+              {bien!.deleted_at != null
+                ? 'Le bien rattaché à ce mandat a été supprimé.'
+                : 'Le bien rattaché à ce mandat est archivé.'}
+            </p>
+            <p className="text-xs text-[var(--brikii-text-muted)]">
+              Ce mandat ne peut pas être activé tant qu&apos;il est lié à ce bien.
+              Rattachez un autre bien ou archivez le mandat.
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              <Link href={`/mandats/${initial.id}/rattacher-bien`}>
+                <BrikiiButton variant="secondary" size="sm">Changer de bien</BrikiiButton>
+              </Link>
+              {!initial.statut_metier && (
+                <BrikiiButton
+                  variant="ghost"
+                  size="sm"
+                  loading={archiving}
+                  onClick={handleArchiver}
+                >
+                  Archiver le mandat
+                </BrikiiButton>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Grille principale */}
         <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 items-start">
@@ -566,6 +628,11 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
         {statut === 'actif' && !initial.bien_id && (
           <p className="text-xs text-[var(--brikii-warning)]">
             ⚠ Un bien doit être rattaché avant de passer ce mandat en statut &quot;Actif&quot;.
+          </p>
+        )}
+        {statut === 'actif' && initial.bien && (initial.bien.deleted_at != null || initial.bien.statut === 'archive') && (
+          <p className="text-xs text-[var(--brikii-warning)]">
+            ⚠ Le bien rattaché est {initial.bien.deleted_at != null ? 'supprimé' : 'archivé'} — impossible de passer en statut &quot;Actif&quot;.
           </p>
         )}
       </Card>

@@ -38,7 +38,7 @@ export default async function MandatPage({ params }: PageProps) {
     .from('mandats')
     .select(`
       *,
-      bien:biens(id, reference, type, ville, code_postal, prix, surface_hab, bien_photos(url, ordre)),
+      bien:biens(id, reference, type, statut, deleted_at, ville, code_postal, prix, surface_hab, bien_photos(url, ordre)),
       proprietaires:mandat_proprietaires(
         id, role, ordre,
         contact:contacts(id, prenom, nom, email, telephone)

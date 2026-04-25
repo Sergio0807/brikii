@@ -28,6 +28,20 @@ const patchSchema = z.object({
 })
 
 type RouteContext = { params: Promise<{ id: string }> }
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
+async function cascadeArchiveMandats(supabase: SupabaseClient, bienId: string, userId: string) {
+  const { error } = await supabase
+    .from('mandats')
+    .update({ statut_metier: 'archive' })
+    .eq('bien_id', bienId)
+    .eq('user_id', userId)
+    .eq('statut', 'actif')
+    .is('statut_metier', null)
+  if (error) {
+    console.error(`[biens/${bienId}] Cascade mandats archive : ${error.message}`)
+  }
+}
 
 export async function GET(_req: NextRequest, { params }: RouteContext) {
   const { id } = await params
@@ -83,10 +97,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
   const { details, ...bienFields } = parsed.data
 
-  // Verify ownership
   const { data: existing } = await supabase
     .from('biens')
-    .select('id, type')
+    .select('id, type, statut')
     .eq('id', id)
     .eq('user_id', user.id)
     .is('deleted_at', null)
@@ -104,6 +117,10 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
+  if (bienFields.statut === 'archive' && existing.statut !== 'archive') {
+    await cascadeArchiveMandats(supabase, id, user.id)
+  }
+
   if (details) {
     const effectiveType = (bienFields.type ?? existing.type) as string
     const sousTable = SOUS_TABLE[effectiveType]
@@ -115,6 +132,35 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       if (detailsError) return NextResponse.json({ error: detailsError.message }, { status: 500 })
     }
   }
+
+  return NextResponse.json({ ok: true })
+}
+
+export async function DELETE(_req: NextRequest, { params }: RouteContext) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+
+  const { data: existing } = await supabase
+    .from('biens')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .single()
+
+  if (!existing) return NextResponse.json({ error: 'Introuvable' }, { status: 404 })
+
+  await cascadeArchiveMandats(supabase, id, user.id)
+
+  const { error } = await supabase
+    .from('biens')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true })
 }
