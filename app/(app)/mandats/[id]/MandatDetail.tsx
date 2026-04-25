@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { BrikiiButton } from '@/components/shared/BrikiiButton'
@@ -214,6 +214,54 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
   const [saving, setSaving]       = useState(false)
   const [archiving, setArchiving] = useState(false)
   const [error, setError]         = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // primaryDoc = document le plus récent de type mandat_pdf
+  const primaryDoc = [...initial.documents]
+    .filter(d => d.type === 'mandat_pdf')
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] ?? null
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>, replaceId: string | null) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setUploadError(null)
+    const fd = new FormData()
+    fd.append('file', file)
+    if (replaceId) fd.append('replace_id', replaceId)
+    try {
+      const res = await fetch(`/api/mandats/${initial.id}/documents`, { method: 'POST', body: fd })
+      if (!res.ok) {
+        const d = await res.json() as { error?: string }
+        setUploadError(d.error ?? 'Erreur lors du dépôt.')
+      } else {
+        router.refresh()
+      }
+    } catch {
+      setUploadError('Erreur réseau. Veuillez réessayer.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function handleDeleteDoc(docId: string) {
+    if (!confirm('Supprimer ce document ? Cette action est irréversible.')) return
+    setUploadError(null)
+    try {
+      const res = await fetch(`/api/mandats/${initial.id}/documents/${docId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const d = await res.json() as { error?: string }
+        setUploadError(d.error ?? 'Erreur lors de la suppression.')
+      } else {
+        router.refresh()
+      }
+    } catch {
+      setUploadError('Erreur réseau. Veuillez réessayer.')
+    }
+  }
 
   async function handleArchiver() {
     if (!confirm('Archiver ce mandat ? Cette action ne supprime aucune donnée.')) return
@@ -401,33 +449,100 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
               )}
             </Card>
 
-            {/* Documents */}
-            {initial.documents.length > 0 && (
-              <Card>
-                <Section title="Documents">
-                  <div className="flex flex-col gap-2">
-                    {initial.documents.map(doc => (
+            {/* Document du mandat */}
+            <Card>
+              <Section title="Document du mandat">
+                {uploadError && (
+                  <p className="text-xs text-[var(--brikii-danger)]">{uploadError}</p>
+                )}
+
+                {primaryDoc ? (
+                  <div className="flex flex-col gap-3">
+                    {/* Fichier existant */}
+                    <a
+                      href={`/api/mandats/${initial.id}/documents/${primaryDoc.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2.5 hover:bg-[var(--brikii-bg-subtle)] transition-colors"
+                      style={{ border: '1px solid var(--brikii-border)', borderRadius: 'var(--brikii-radius-input)' }}
+                    >
+                      <span className="text-base flex-shrink-0">📄</span>
+                      <span className="text-sm text-[var(--brikii-text)] truncate flex-1">
+                        {primaryDoc.nom}
+                      </span>
+                      <span className="text-xs text-[var(--brikii-text-muted)] shrink-0 ml-2">
+                        {primaryDoc.taille ? `${Math.round(primaryDoc.taille / 1024)} ko · ` : ''}Ouvrir →
+                      </span>
+                    </a>
+                    <div className="flex gap-2 flex-wrap">
+                      <BrikiiButton
+                        variant="secondary"
+                        size="sm"
+                        loading={uploading}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Remplacer
+                      </BrikiiButton>
+                      <BrikiiButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteDoc(primaryDoc.id)}
+                      >
+                        Supprimer
+                      </BrikiiButton>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-sm text-[var(--brikii-text-muted)]">
+                      Aucun document de mandat déposé.
+                    </p>
+                    <BrikiiButton
+                      variant="secondary"
+                      size="sm"
+                      loading={uploading}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Déposer le document du mandat
+                    </BrikiiButton>
+                  </div>
+                )}
+
+                {/* Input fichier caché */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.heic,.heif"
+                  className="sr-only"
+                  onChange={e => handleUpload(e, primaryDoc?.id ?? null)}
+                />
+
+                {/* Autres documents (n8n, sources externes) */}
+                {initial.documents.filter(d => d !== primaryDoc).length > 0 && (
+                  <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--brikii-border)]">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--brikii-text-muted)]">
+                      Autres documents
+                    </span>
+                    {initial.documents.filter(d => d !== primaryDoc).map(doc => (
                       <a
                         key={doc.id}
                         href={`/api/mandats/${initial.id}/documents/${doc.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between px-3 py-2.5 text-sm hover:bg-[var(--brikii-bg-subtle)] transition-colors"
+                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--brikii-bg-subtle)] transition-colors"
                         style={{ border: '1px solid var(--brikii-border)', borderRadius: 'var(--brikii-radius-input)' }}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-base flex-shrink-0">📄</span>
-                          <span className="text-[var(--brikii-text)] truncate">{doc.nom}</span>
-                        </div>
-                        <span className="text-xs text-[var(--brikii-text-muted)] shrink-0 ml-3">
+                        <span className="text-sm flex-shrink-0">📄</span>
+                        <span className="text-[var(--brikii-text)] truncate flex-1">{doc.nom}</span>
+                        <span className="text-xs text-[var(--brikii-text-muted)] shrink-0">
                           {doc.taille ? `${Math.round(doc.taille / 1024)} ko` : 'Ouvrir →'}
                         </span>
                       </a>
                     ))}
                   </div>
-                </Section>
-              </Card>
-            )}
+                )}
+              </Section>
+            </Card>
           </div>
 
           {/* ─── DROITE ─── */}
