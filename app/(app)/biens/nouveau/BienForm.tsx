@@ -26,7 +26,11 @@ interface ImportState {
   createdAt: number
 }
 
-export function BienForm() {
+interface BienFormProps {
+  mandatImportId: string | null
+}
+
+export function BienForm({ mandatImportId }: BienFormProps) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('manuel')
 
@@ -70,6 +74,25 @@ export function BienForm() {
         setManualError(typeof data.error === 'string' ? data.error : 'Erreur lors de la création.')
         return
       }
+      const { id: bienId } = await res.json() as { id: string }
+
+      // Si on vient d'un import mandat, rattacher le bien au mandat
+      if (mandatImportId) {
+        const rattacherRes = await fetch(`/api/mandats/import/${mandatImportId}/rattacher`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ bien_id: bienId }),
+        })
+        if (rattacherRes.ok) {
+          const rattacherData = await rattacherRes.json() as { mandat_id?: string }
+          if (rattacherData.mandat_id) {
+            router.push(`/mandats/${rattacherData.mandat_id}`)
+            return
+          }
+        }
+        // En cas d'échec du rattachement, aller sur la fiche bien quand même
+      }
+
       router.push('/biens')
     } catch {
       setManualError('Erreur réseau. Veuillez réessayer.')

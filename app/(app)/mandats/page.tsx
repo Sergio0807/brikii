@@ -246,9 +246,15 @@ function ImportCard({ imp }: { imp: ImportRow }) {
           )}
 
           <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <Link href={`/mandats/import/${imp.id}/rattacher`}>
+              <BrikiiButton variant="secondary" size="sm">Rattacher à un bien existant</BrikiiButton>
+            </Link>
+            <Link href={`/biens/nouveau?mandat_import_id=${imp.id}`}>
+              <BrikiiButton variant="secondary" size="sm">Créer le bien correspondant</BrikiiButton>
+            </Link>
             {hasFile && (
               <a href={`/api/mandats/import/${imp.id}/document`} target="_blank" rel="noopener noreferrer">
-                <BrikiiButton variant="secondary" size="sm">Ouvrir le document</BrikiiButton>
+                <BrikiiButton variant="ghost" size="sm">Ouvrir le document</BrikiiButton>
               </a>
             )}
             <Link href="/mandats/nouveau">
