@@ -16,6 +16,7 @@ const payloadSchema = z.object({
   // Champs mandat extraits du PDF
   type:              z.enum(['exclusif', 'simple', 'semi_exclusif', 'recherche', 'gestion']).optional(),
   numero:            z.string().optional(),
+  numero_mandat:     z.string().optional(),
   date_signature:    z.string().optional(),
   date_debut:        z.string().optional(),
   duree_mois:        z.number().int().positive().optional(),
@@ -133,6 +134,7 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id:            importRow.user_id,
         numero:             data.numero ?? generateNumero(),
+        numero_mandat:      data.numero_mandat ?? null,
         statut:             'a_completer',
         type:               data.type ?? 'exclusif',
         date_signature:     data.date_signature ?? new Date().toISOString().slice(0, 10),

@@ -78,6 +78,7 @@ interface Document {
 interface Mandat {
   id: string
   numero: string
+  numero_mandat: string | null
   type: typeof MANDAT_TYPES[number]
   statut: typeof STATUTS[number]
   statut_metier: typeof STATUTS_METIER[number] | null
@@ -163,6 +164,7 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
   const [error, setError] = useState<string | null>(null)
 
   // Editable fields
+  const [numeroMandat, setNumeroMandat]       = useState(initial.numero_mandat ?? '')
   const [type, setType]                       = useState(initial.type)
   const [statut, setStatut]                   = useState(initial.statut)
   const [statutMetier, setStatutMetier]       = useState(initial.statut_metier ?? '')
@@ -177,6 +179,7 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
   const [clauses, setClauses]                 = useState(initial.clauses ?? '')
 
   function cancelEdit() {
+    setNumeroMandat(initial.numero_mandat ?? '')
     setType(initial.type); setStatut(initial.statut)
     setStatutMetier(initial.statut_metier ?? '')
     setDateSignature(initial.date_signature); setDateDebut(initial.date_debut)
@@ -205,6 +208,7 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          numero_mandat: numeroMandat || null,
           type,
           statut,
           statut_metier: statutMetier || null,
@@ -327,8 +331,11 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
 
             <div>
               <h2 className="text-base font-bold text-[var(--brikii-text)]">
-                {TYPE_LABELS[initial.type] ?? initial.type}
+                {initial.numero_mandat ? `n° ${initial.numero_mandat}` : 'Sans numéro'}
               </h2>
+              <p className="text-xs text-[var(--brikii-text-muted)] mt-0.5">
+                {TYPE_LABELS[initial.type] ?? initial.type}
+              </p>
               <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                 {initial.statut_metier ? (
                   <BrikiiBadge variant="danger">
@@ -444,6 +451,19 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
         </div>
       </div>
       {error && <p className="text-xs text-[var(--brikii-danger)] px-1">{error}</p>}
+
+      <div
+        className="p-5 flex flex-col gap-5"
+        style={{ background: 'var(--brikii-bg)', border: '1px solid var(--brikii-border)', borderRadius: 'var(--brikii-radius-card)' }}
+      >
+        <BrikiiInput
+          label="Numéro de mandat"
+          value={numeroMandat}
+          onChange={e => setNumeroMandat(e.target.value)}
+          placeholder="ex. 5503"
+          hint="Numéro figurant sur le document papier"
+        />
+      </div>
 
       <div
         className="p-5 flex flex-col gap-5"

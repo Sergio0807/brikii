@@ -61,6 +61,7 @@ type BienShape = { ville: string | null; code_postal: string | null }
 type MandatRow = {
   id: string
   numero: string
+  numero_mandat: string | null
   type: string
   statut: string
   statut_metier: string | null
@@ -93,7 +94,7 @@ export default async function MandatsPage() {
   const [{ data: mandats }, { data: imports }] = await Promise.all([
     supabase
       .from('mandats')
-      .select('id, numero, type, statut, statut_metier, bien_id, date_debut, prix_vente, honoraires_pct, created_at, bien:biens(ville, code_postal)')
+      .select('id, numero, numero_mandat, type, statut, statut_metier, bien_id, date_debut, prix_vente, honoraires_pct, created_at, bien:biens(ville, code_postal)')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(100),
@@ -160,21 +161,22 @@ function MandatCard({ mandat: m }: { mandat: MandatRow }) {
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5 min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-[var(--brikii-text)]">
-              {TYPE_LABELS[m.type] ?? m.type}
+            <span className="text-sm font-semibold text-[var(--brikii-text)]">
+              {m.numero_mandat ? `n° ${m.numero_mandat}` : 'Sans numéro'}
             </span>
-            {bienLabel ? (
-              <>
-                <span className="text-sm text-[var(--brikii-text-muted)]">·</span>
-                <span className="text-sm text-[var(--brikii-text-muted)] truncate">{bienLabel}</span>
-              </>
-            ) : (
-              <BrikiiBadge variant="neutral">Aucun bien rattaché</BrikiiBadge>
-            )}
+            <span className="text-sm text-[var(--brikii-text-muted)]">—</span>
+            <span className="text-sm text-[var(--brikii-text-muted)]">{TYPE_LABELS[m.type] ?? m.type}</span>
+            {!bienLabel && <BrikiiBadge variant="neutral">Aucun bien rattaché</BrikiiBadge>}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-mono text-[var(--brikii-text-muted)]">{m.numero}</span>
+            {bienLabel && (
+              <>
+                <span className="text-xs text-[var(--brikii-text-muted)]">·</span>
+                <span className="text-xs text-[var(--brikii-text-muted)] truncate">{bienLabel}</span>
+              </>
+            )}
             {m.date_debut && (
               <span className="text-xs text-[var(--brikii-text-muted)]">
                 · début {formatDate(m.date_debut)}

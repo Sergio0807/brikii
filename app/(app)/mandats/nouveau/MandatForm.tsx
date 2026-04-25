@@ -46,6 +46,7 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
   const [tab, setTab] = useState<Tab>('manuel')
 
   // ── Champs saisie manuelle ────────────────────────────────────────────────
+  const [numeroMandat, setNumeroMandat]         = useState('')
   const [type, setType]                         = useState('exclusif')
   const [dateSignature, setDateSignature]       = useState('')
   const [dateDebut, setDateDebut]               = useState('')
@@ -138,6 +139,7 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bien_id:           bienId ?? undefined,
+          numero_mandat:     numeroMandat || null,
           type,
           date_signature:    dateSignature,
           date_debut:        dateDebut,
@@ -270,6 +272,15 @@ export function MandatForm({ bienId, bienLabel }: MandatFormProps) {
                 Aucun bien sélectionné — vous pourrez associer le bien depuis la fiche du mandat.
               </p>
             )}
+
+            {/* Numéro de mandat */}
+            <BrikiiInput
+              label="Numéro de mandat"
+              value={numeroMandat}
+              onChange={e => setNumeroMandat(e.target.value)}
+              placeholder="ex. 5503"
+              hint="Numéro figurant sur le document papier (facultatif)"
+            />
 
             {/* Type */}
             <div className="flex flex-col gap-1">

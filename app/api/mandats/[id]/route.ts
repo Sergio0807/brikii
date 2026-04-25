@@ -9,6 +9,7 @@ const HONO_CHARGES   = ['vendeur', 'acquereur', 'partage'] as const
 
 const patchSchema = z.object({
   bien_id:            z.string().uuid().nullable().optional(),
+  numero_mandat:      z.string().nullable().optional(),
   type:               z.enum(MANDAT_TYPES).optional(),
   statut:             z.enum(STATUTS).optional(),
   statut_metier:      z.enum(STATUTS_METIER).nullable().optional(),

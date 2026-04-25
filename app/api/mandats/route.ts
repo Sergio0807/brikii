@@ -7,6 +7,7 @@ const HONO_CHARGES = ['vendeur', 'acquereur', 'partage'] as const
 
 const createSchema = z.object({
   bien_id:            z.string().uuid().optional(),
+  numero_mandat:      z.string().nullable().optional(),
   type:               z.enum(MANDAT_TYPES),
   date_signature:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   date_debut:         z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('mandats')
-    .select('id, numero, type, statut, statut_metier, bien_id, date_signature, date_debut, date_fin, duree_mois, reconductible, prix_vente, honoraires_pct, honoraires_montant, honoraires_charge, created_at')
+    .select('id, numero, numero_mandat, type, statut, statut_metier, bien_id, date_signature, date_debut, date_fin, duree_mois, reconductible, prix_vente, honoraires_pct, honoraires_montant, honoraires_charge, created_at')
     .eq('user_id', user.id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
     .insert({
       user_id:            user.id,
       numero:             generateNumero(),
+      numero_mandat:      d.numero_mandat ?? null,
       bien_id:            d.bien_id ?? null,
       type:               d.type,
       statut:             'brouillon',

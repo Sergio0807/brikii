@@ -78,7 +78,7 @@ export default async function MandatPage({ params }: PageProps) {
     <>
       <AppHeader
         back={back}
-        title={`${typeLabel} · ${mandat.numero}`}
+        title={mandat.numero_mandat ? `Mandat n° ${mandat.numero_mandat} — ${typeLabel}` : `Mandat sans numéro — ${typeLabel}`}
         subtitle={subtitle}
       />
       <MandatDetail mandat={mandat} />
