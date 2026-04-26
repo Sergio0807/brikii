@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('contacts')
-    .select('id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone')
+    .select('id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone, ville, types, statut, score')
     .eq('user_id', user.id)
     .eq('statut', 'actif')
     .is('deleted_at', null)
