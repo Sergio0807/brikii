@@ -9,6 +9,7 @@ import { BrikiiBadge } from '@/components/shared/BrikiiBadge'
 import { bienPhotoThumbUrl } from '@/lib/cloudflare-images'
 import { MandatDureeBar } from '@/components/shared/MandatDureeBar'
 import { Home } from 'lucide-react'
+import { MandatProprietairesBlock } from '@/components/mandats/MandatProprietairesBlock'
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -64,8 +65,11 @@ interface BienRef {
 
 interface Contact {
   id: string
+  personne_type: string
+  civilite?: string | null
   prenom?: string | null
   nom?: string | null
+  raison_sociale?: string | null
   email?: string | null
   telephone?: string | null
 }
@@ -74,7 +78,12 @@ interface Proprietaire {
   id: string
   role: string
   ordre: number
+  nature_droit: string
+  quote_part_numerateur?: number | null
+  quote_part_denominateur?: number | null
+  source_bien_proprietaire_id?: string | null
   contact: Contact | null
+  representant: Contact | null
 }
 
 interface Document {
@@ -630,32 +639,11 @@ export function MandatDetail({ mandat: initial }: { mandat: Mandat }) {
 
             {/* Propriétaires */}
             <Card>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--brikii-text-muted)] border-b border-[var(--brikii-border)] pb-2">
-                Propriétaires
-              </h3>
-              {initial.proprietaires.length === 0 ? (
-                <p className="text-sm text-[var(--brikii-text-muted)]">Aucun propriétaire renseigné.</p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {initial.proprietaires
-                    .sort((a, b) => a.ordre - b.ordre)
-                    .map(p => {
-                      const c = p.contact
-                      const name = c ? [c.prenom, c.nom].filter(Boolean).join(' ') || '—' : '—'
-                      return (
-                        <div key={p.id} className="flex flex-col gap-0.5">
-                          <span className="text-sm text-[var(--brikii-text)]">{name}</span>
-                          <span className="text-xs text-[var(--brikii-text-muted)]">
-                            {ROLE_LABELS[p.role] ?? p.role}
-                          </span>
-                          {c?.email && (
-                            <span className="text-xs text-[var(--brikii-text-muted)]">{c.email}</span>
-                          )}
-                        </div>
-                      )
-                    })}
-                </div>
-              )}
+              <MandatProprietairesBlock
+                mandatId={initial.id}
+                bienId={initial.bien_id}
+                initialProprietaires={initial.proprietaires}
+              />
             </Card>
           </div>
         </div>

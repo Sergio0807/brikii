@@ -8,6 +8,7 @@ import { BrikiiInput } from '@/components/shared/BrikiiInput'
 import { BrikiiBadge } from '@/components/shared/BrikiiBadge'
 import { AdresseAutocomplete } from '@/components/shared/AdresseAutocomplete'
 import { MandatDureeBar } from '@/components/shared/MandatDureeBar'
+import { ProprietairesBlock } from '@/components/biens/ProprietairesBlock'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,6 +74,17 @@ interface Details {
 }
 
 interface Photo { id: string; url: string; ordre: number }
+
+interface BienProprietaire {
+  id: string
+  nature_droit: string
+  quote_part_numerateur?: number | null
+  quote_part_denominateur?: number | null
+  date_entree?: string | null
+  ordre: number
+  contact: { id: string; personne_type: string; civilite?: string | null; prenom?: string | null; nom?: string | null; raison_sociale?: string | null; email?: string | null; telephone?: string | null } | null
+  representant: { id: string; personne_type: string; civilite?: string | null; prenom?: string | null; nom?: string | null; raison_sociale?: string | null; email?: string | null; telephone?: string | null } | null
+}
 
 interface MandatSummary {
   id: string
@@ -195,7 +207,7 @@ const MANDAT_STATUT_UI = {
   archive:  { label: 'Archivé', variant: 'neutral'   },
 } as const
 
-export function BienDetail({ bien: initial, mandats = [] }: { bien: Bien; mandats?: MandatSummary[] }) {
+export function BienDetail({ bien: initial, mandats = [], proprietaires = [] }: { bien: Bien; mandats?: MandatSummary[]; proprietaires?: BienProprietaire[] }) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -671,16 +683,7 @@ export function BienDetail({ bien: initial, mandats = [] }: { bien: Bien; mandat
             )
           })()}
 
-          {/* Propriétaire placeholder */}
-          <div
-            className="p-5 flex flex-col gap-3"
-            style={{ background: 'var(--brikii-bg)', border: '1px solid var(--brikii-border)', borderRadius: 'var(--brikii-radius-card)' }}
-          >
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--brikii-text-muted)] border-b border-[var(--brikii-border)] pb-2">
-              Propriétaire
-            </h3>
-            <p className="text-sm text-[var(--brikii-text-muted)]">Non renseigné.</p>
-          </div>
+          <ProprietairesBlock bienId={initial.id} initialProprietaires={proprietaires} />
         </div>
       </div>
     )
