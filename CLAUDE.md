@@ -26,15 +26,17 @@ npm run lint       # Run ESLint (replaces removed `next lint`)
 
 - **`PRD.md`** — vision globale, modules, BDD, sécurité, RGPD
 - **`ARCHITECTURE.md`** — décisions techniques, stack, conventions
-- **`docs/briques/`** — spécifications détaillées par brique fonctionnelle (source de vérité métier)
-  - `docs/briques/biens.md` — Biens immobiliers
-  - `docs/briques/mandats.md` — Mandats
+- **`docs/briques/`** — briques fonctionnelles commercialisables
   - `docs/briques/pass-adresses.md` — Pass'Adresses (BIA)
-  - `docs/briques/contacts.md` — Contacts / CRM
   - `docs/briques/immo-cloud.md` — ImmoCloud (documents)
   - `docs/briques/brikii-pool.md` — Brikii Pool (collaboration)
+- **`docs/socle/`** — entités du cœur applicatif (non commercialisées seules)
+  - `docs/socle/biens.md` — Biens immobiliers
+  - `docs/socle/mandats.md` — Mandats
+  - `docs/socle/contacts.md` — Contacts / CRM
+  - `docs/socle/transactions.md` — Transactions
 
-> Avant d'implémenter une fonctionnalité, lire le fichier de la brique concernée.
+> Avant d'implémenter une fonctionnalité, lire le fichier de la brique ou de l'entité concernée.
 > Ne jamais enrichir le scope sans instruction explicite.
 > Toute modification de BDD → migration numérotée dans `migrations/`.
 

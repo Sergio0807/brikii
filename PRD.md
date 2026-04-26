@@ -30,20 +30,26 @@
 
 ---
 
-## Organisation documentaire — Briques fonctionnelles
+## Organisation documentaire
 
-Brikii est organisé autour de **briques fonctionnelles indépendantes mais interconnectées**.
-Chaque brique dispose de son propre fichier de spécification dans `/docs/briques/`.
-Ces fichiers sont la source de vérité métier — ce PRD en est la synthèse globale.
+L'architecture produit distingue deux niveaux. Les spécifications détaillées sont dans `/docs/`.
+
+### Briques fonctionnelles — modules commercialisables
 
 | Brique | Résumé | Spécification | Priorité |
 |--------|--------|---------------|----------|
-| **Biens** | CRUD biens immobiliers, import URL, photos, statuts | [docs/briques/biens.md](docs/briques/biens.md) | MVP V1 |
-| **Mandats** | Cycle de vie mandats, document PDF, alertes expiration | [docs/briques/mandats.md](docs/briques/mandats.md) | MVP V1 |
 | **Pass'Adresses** | Sécurisation adresses, BIA, qualification prospect | [docs/briques/pass-adresses.md](docs/briques/pass-adresses.md) | MVP V1 |
-| **Contacts** | CRM multi-rôles, historique, alertes biens | [docs/briques/contacts.md](docs/briques/contacts.md) | MVP V1 |
 | **ImmoCloud** | Dossier documentaire du bien, niveaux d'accès, traçabilité | [docs/briques/immo-cloud.md](docs/briques/immo-cloud.md) | V2 |
 | **Brikii Pool** | Collaboration interprofessionnelle, partage mandats, rétrocession | [docs/briques/brikii-pool.md](docs/briques/brikii-pool.md) | V2 |
+
+### Socle métier — cœur applicatif
+
+| Entité | Résumé | Spécification | Priorité |
+|--------|--------|---------------|----------|
+| **Biens** | CRUD biens immobiliers, import URL, photos, statuts | [docs/socle/biens.md](docs/socle/biens.md) | MVP V1 |
+| **Mandats** | Cycle de vie mandats, document PDF, alertes expiration | [docs/socle/mandats.md](docs/socle/mandats.md) | MVP V1 |
+| **Contacts** | CRM multi-rôles, historique, alertes biens | [docs/socle/contacts.md](docs/socle/contacts.md) | MVP V1 |
+| **Transactions** | Offres, compromis, acte — suivi jusqu'à la vente | [docs/socle/transactions.md](docs/socle/transactions.md) | V2 |
 
 > **Règle absolue :** toute modification de base de données passe par une migration numérotée. Jamais de modification destructive.
 
