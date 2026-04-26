@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { syncBienProprietaire } from '@/lib/crm-sync'
 
 const NATURE_DROIT = ['pleine_propriete', 'usufruit', 'nue_propriete', 'indivision'] as const
 
@@ -90,6 +91,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // Synchronisation CRM best-effort — n'invalide pas la réponse en cas d'échec
+  await syncBienProprietaire(supabase, { contactId: parsed.data.contact_id, bienId })
 
   return NextResponse.json(data, { status: 201 })
 }
