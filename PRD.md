@@ -30,6 +30,25 @@
 
 ---
 
+## Organisation documentaire — Briques fonctionnelles
+
+Brikii est organisé autour de **briques fonctionnelles indépendantes mais interconnectées**.
+Chaque brique dispose de son propre fichier de spécification dans `/docs/briques/`.
+Ces fichiers sont la source de vérité métier — ce PRD en est la synthèse globale.
+
+| Brique | Résumé | Spécification | Priorité |
+|--------|--------|---------------|----------|
+| **Biens** | CRUD biens immobiliers, import URL, photos, statuts | [docs/briques/biens.md](docs/briques/biens.md) | MVP V1 |
+| **Mandats** | Cycle de vie mandats, document PDF, alertes expiration | [docs/briques/mandats.md](docs/briques/mandats.md) | MVP V1 |
+| **Pass'Adresses** | Sécurisation adresses, BIA, qualification prospect | [docs/briques/pass-adresses.md](docs/briques/pass-adresses.md) | MVP V1 |
+| **Contacts** | CRM multi-rôles, historique, alertes biens | [docs/briques/contacts.md](docs/briques/contacts.md) | MVP V1 |
+| **ImmoCloud** | Dossier documentaire du bien, niveaux d'accès, traçabilité | [docs/briques/immo-cloud.md](docs/briques/immo-cloud.md) | V2 |
+| **Brikii Pool** | Collaboration interprofessionnelle, partage mandats, rétrocession | [docs/briques/brikii-pool.md](docs/briques/brikii-pool.md) | V2 |
+
+> **Règle absolue :** toute modification de base de données passe par une migration numérotée. Jamais de modification destructive.
+
+---
+
 ## 1. Vision du produit
 
 ### 1.1 Présentation générale

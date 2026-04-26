@@ -22,6 +22,22 @@ npm run lint       # Run ESLint (replaces removed `next lint`)
 - **TypeScript** strict mode, path alias `@/*` → `./*`
 - **ESLint** flat config (`eslint.config.mjs`)
 
+## Sources de vérité produit
+
+- **`PRD.md`** — vision globale, modules, BDD, sécurité, RGPD
+- **`ARCHITECTURE.md`** — décisions techniques, stack, conventions
+- **`docs/briques/`** — spécifications détaillées par brique fonctionnelle (source de vérité métier)
+  - `docs/briques/biens.md` — Biens immobiliers
+  - `docs/briques/mandats.md` — Mandats
+  - `docs/briques/pass-adresses.md` — Pass'Adresses (BIA)
+  - `docs/briques/contacts.md` — Contacts / CRM
+  - `docs/briques/immo-cloud.md` — ImmoCloud (documents)
+  - `docs/briques/brikii-pool.md` — Brikii Pool (collaboration)
+
+> Avant d'implémenter une fonctionnalité, lire le fichier de la brique concernée.
+> Ne jamais enrichir le scope sans instruction explicite.
+> Toute modification de BDD → migration numérotée dans `migrations/`.
+
 ## Architecture
 
 This project uses the **App Router** (`app/` directory):
