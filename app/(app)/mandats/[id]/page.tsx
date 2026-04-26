@@ -34,8 +34,8 @@ export default async function MandatPage({ params }: PageProps) {
       bien:biens(id, reference, type, statut, deleted_at, ville, code_postal, prix, surface_hab, bien_photos(url, ordre)),
       proprietaires:mandat_proprietaires(
         id, role, ordre, nature_droit, quote_part_numerateur, quote_part_denominateur, source_bien_proprietaire_id,
-        contact:contacts(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
-        representant:contacts!representant_contact_id(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
+        contact:contacts!mandat_proprietaires_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
+        representant:contacts!mandat_proprietaires_representant_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
       ),
       documents:mandat_documents(id, type, nom, url, taille, created_at)
     `)

@@ -46,8 +46,8 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     .from('mandat_proprietaires')
     .select(`
       id, role, ordre, nature_droit, quote_part_numerateur, quote_part_denominateur, source_bien_proprietaire_id,
-      contact:contacts(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
-      representant:contacts!representant_contact_id(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
+      contact:contacts!mandat_proprietaires_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
+      representant:contacts!mandat_proprietaires_representant_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
     `)
     .eq('mandat_id', mandatId)
     .order('ordre', { ascending: true })
@@ -87,8 +87,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     .insert({ ...parsed.data, mandat_id: mandatId })
     .select(`
       id, role, ordre, nature_droit, quote_part_numerateur, quote_part_denominateur, source_bien_proprietaire_id,
-      contact:contacts(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
-      representant:contacts!representant_contact_id(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
+      contact:contacts!mandat_proprietaires_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
+      representant:contacts!mandat_proprietaires_representant_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
     `)
     .single()
 
@@ -155,8 +155,8 @@ async function handleImportFromBien(
     .from('mandat_proprietaires')
     .select(`
       id, role, ordre, nature_droit, quote_part_numerateur, quote_part_denominateur, source_bien_proprietaire_id,
-      contact:contacts(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
-      representant:contacts!representant_contact_id(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
+      contact:contacts!mandat_proprietaires_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
+      representant:contacts!mandat_proprietaires_representant_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
     `)
     .eq('mandat_id', mandatId)
     .order('ordre', { ascending: true })

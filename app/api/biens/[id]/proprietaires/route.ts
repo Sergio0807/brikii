@@ -44,8 +44,8 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     .from('bien_proprietaires')
     .select(`
       id, nature_droit, quote_part_numerateur, quote_part_denominateur, date_entree, ordre, created_at,
-      contact:contacts(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
-      representant:contacts!representant_contact_id(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
+      contact:contacts!bien_proprietaires_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
+      representant:contacts!bien_proprietaires_representant_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
     `)
     .eq('bien_id', bienId)
     .order('ordre', { ascending: true })
@@ -79,8 +79,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     .insert({ ...parsed.data, bien_id: bienId })
     .select(`
       id, nature_droit, quote_part_numerateur, quote_part_denominateur, date_entree, ordre, created_at,
-      contact:contacts(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
-      representant:contacts!representant_contact_id(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
+      contact:contacts!bien_proprietaires_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone),
+      representant:contacts!bien_proprietaires_representant_contact_id_fkey(id, personne_type, civilite, prenom, nom, raison_sociale, email, telephone)
     `)
     .single()
 
